@@ -307,7 +307,6 @@ int DiskManager::SubmitDiskRequest() {
 	struct io_uring_cqe *cqe;
 	unsigned int completed = 0;
 	while (completed < this->perform_work_requests_.size()) {
-		//	std::cout<<"Submited\n";
 		ret = io_uring_wait_cqe(&(this->ring_), &cqe);
 		if (ret < 0) {
 			// Handle error: Set exceptions on remaining promises
@@ -440,7 +439,7 @@ void DiskManager::WorkerThread() {
 		}
 	} catch (const std::exception &e) {
 		std::cerr << "[Error] Exception in worker thread: " << e.what() << std::endl;
-		// Handle exception, possibly set a flag to indicate failure
+		// @TODO Handle exception
 	}
 }
 

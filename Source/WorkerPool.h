@@ -107,7 +107,7 @@ private:
 			}
 		} catch (const std::exception &e) {
 			std::cerr << "[Error] Exception in worker thread: " << e.what() << std::endl;
-			// handle exception
+			// @TODO handle exception
 		}
 	}
 

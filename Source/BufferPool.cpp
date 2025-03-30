@@ -174,11 +174,6 @@ void BufferPool::UnpinPage(const index &in_memory_pid) {
 		result.get();
 
 		pm->page_mutex.unlock();
-		// before we acquired buffer_lock page might have been already grabbed by
-		// other thread waiting on this specific page, if that was the case it increased pin count
-		// then we don't want to put in on free list
-		// it's not possible for it to be acquired by thread waiting in GetFreePages since it wasn't placed on that list
-		// yet
 		std::unique_lock<std::mutex> buffer_lock(this->buffer_mutex_);
 		if (pm->pin_count == 0) {
 			free_pages_.insert(in_memory_pid);
@@ -195,12 +190,6 @@ void BufferPool::UnpinPage(const index &in_memory_pid) {
 		pm->page_mutex.unlock();
 
 		if (pm->pin_count == 0) {
-			// another three are  there
-			// before we acquired buffer_lock page might have been already grabbed by
-			// other thread waiting on this specific page, if that was the case it increased pin count
-			// then we don't want to put in on free list
-			// it's not possible for it to be acquired by thread waiting in GetFreePages since it wasn't placed on that
-			// list yet
 
 			std::unique_lock<std::mutex> buffer_lock(this->buffer_mutex_);
 			if (pm->pin_count == 0) {

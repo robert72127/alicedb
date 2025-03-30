@@ -397,7 +397,6 @@ struct SearchTree {
 private:
 	Table<Type, TableType> *table_;
 	size_t key_size_;
-	// std::vector<index> btree_page_indexes_;
 	std::unordered_map<uint64_t, std::vector<StorageIndex>> tuples_to_index_ = {};
 
 	std::function<MatchType(const Type &)> transform_;
@@ -628,7 +627,6 @@ public:
 	}
 
 private:
-	// methods for page accesing etc
 
 	// heap data pages
 	unsigned int tuples_per_page_;

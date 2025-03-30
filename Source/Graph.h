@@ -186,15 +186,6 @@ public:
 		}
 
 		// update graph metadatafile
-		// ok and what do we actually need to store there?
-		// like connections and node lists is actually stored in object itself(in code)
-		// what we need to store instead is for each node it's metadata info such that each node will be called with
-		// right args for Table
-
-		// ok tables will hold reference to the catalog, so i think we need to just simply pass this pointer to the Node
-		// that is being created
-
-		// so we just need to write all this metadata to some files
 
 		std::string graph_metadata_file = this->graph_directory_ / "graph_metadata";
 		std::ofstream output_stream(graph_metadata_file, std::ios::trunc);
@@ -282,7 +273,6 @@ public:
 		make_edge(static_cast<Node *>(in_node), static_cast<Node *>(sink));
 		all_nodes_.insert(static_cast<Node *>(sink));
 		sinks_.insert(static_cast<Node *>(sink));
-		// return sink;
 
 		return reinterpret_cast<AliceDB::SinkNode<InType> *>(sink);
 	}
@@ -611,7 +601,6 @@ private:
 		std::set<Node *> visited;
 		std::stack<Node *> stack;
 
-		// for each node:
 		for (auto it = all_nodes_.begin(); it != all_nodes_.end(); it++) {
 			Node *current = *it;
 

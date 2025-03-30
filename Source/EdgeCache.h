@@ -20,8 +20,6 @@ std::array<char, sizeof(Type)> Key(const Type &type) {
 template <typename Type>
 struct KeyHash {
 	std::size_t operator()(const std::array<char, sizeof(Type)> &key) const {
-		// You can use any suitable hash algorithm. Here, we'll use std::hash with
-		// std::string_view
 		return std::hash<std::string_view>()(std::string_view(key.data(), key.size()));
 	}
 };
@@ -62,7 +60,6 @@ public:
 	}
 
 	void Insert(const Tuple<Type> &tpl) {
-		// std::cout<<static_cast<void*>(this)<<std::endl;
 		auto key = Key(tpl.data);
 		tuples_[key].push_back(tpl.delta);
 	}
@@ -87,7 +84,6 @@ private:
 	typename std::unordered_map<std::array<char, sizeof(Type)>, std::vector<Delta>>::iterator current_;
 
 	// storage
-
 	std::unordered_map<std::array<char, sizeof(Type)>, std::vector<Delta>, KeyHash<Type>> tuples_;
 };
 

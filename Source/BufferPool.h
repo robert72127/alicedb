@@ -37,9 +37,7 @@ struct IndexStorage {
 
 	// insert index at the end of structure
 	void insert(const index &item) {
-		// Check if the item already exists (optional, based on requirements).
 		if (map_.find(item) != map_.end()) {
-			// Item already exists; handle as needed (e.g., ignore or update).
 			return;
 		}
 		list_.emplace_back(item);

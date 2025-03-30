@@ -94,7 +94,6 @@ protected:
 
 	// set by in node compute when it produced some tuples
 	// or by outnode update timestamp when it's time to compact
-
 	bool has_work_;
 
 	std::atomic<int> clean_count {0};
@@ -220,6 +219,7 @@ private:
 /**
  * @brief out node that collect outputs and allow for iterating internal storage
  */
+/** @todo add optional callback after processing nodes */
 template <typename Type>
 class SinkNode : public TypedNode<Type> {
 public:

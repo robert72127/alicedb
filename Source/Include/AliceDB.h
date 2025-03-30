@@ -140,6 +140,6 @@ private:
 
 	bool shutdown_ = false;
 };
-} // namespace AliceDB
 
+} // namespace AliceDB
 #endif
