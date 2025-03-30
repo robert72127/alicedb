@@ -118,12 +118,12 @@ public:
 	/** @brief Create bufferpool, allocate page_count * PageSize of memory */
 	BufferPool();
 
-	~BufferPool();
 
 	/** @brief Shut down buffer pool
 	 * since disk manager will be closed first and will take
 	 * care of writing diry indexes here we will just deallocate memory
 	 */
+	~BufferPool();
 
 	/**  @brief Assign disk, this buffer pool will use to write pages to
 	 * return true on succes, false on nullptr or if dm_ is already set

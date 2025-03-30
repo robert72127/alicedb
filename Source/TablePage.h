@@ -111,7 +111,6 @@ struct TablePage {
 };
 
 /**  Per Table readonly wrapper for BufferPool page
- * there are two such structures per Table,
  * to get content of other page, just switch underlying using UpdateTable
  */
 template <typename Type>

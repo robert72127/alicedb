@@ -103,7 +103,6 @@ public:
 	}
 
 private:
-	// std::function<bool(std::string, Tuple<Type> *)> produce_;
 	std::function<bool(std::istringstream &, Type *)> parse_;
 	std::ifstream file_stream_;
 	unsigned long current_line_;

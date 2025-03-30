@@ -74,7 +74,6 @@ public:
 			}
 			g->Start();
 
-			// this->graphs_lock_.lock();
 			for (const auto &present : graphs_) {
 				if (present == g) {
 					return;

@@ -119,7 +119,7 @@ public:
 enum class ProducerType { FILE, FILE_BINARY, TCPCLIENT };
 
 /**  @brief Source node is responsible for producing data through Compute function and
- * then writing output to both out_cache, and persistent table creator of this
+ * then writing output to  out_cache. Creator of this
  * node needs to specify how long delayed data might arrive
  */
 template <typename Type>

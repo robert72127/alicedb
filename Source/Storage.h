@@ -348,7 +348,7 @@ struct SearchTree {
 	}
 
 	// searches for key if it finds it sets idx to corresponding index, and returns true,
-	// else returns alse
+	// else returns false
 	bool Search(const Type &key, StorageIndex &idx) {
 		MatchType match_key = this->transform_(key);
 		uint64 key_hash = CityHash64WithSeed((char *)&match_key, this->key_size_, 0);
