@@ -241,6 +241,7 @@ public:
 		return HeapState<Type>(current_page_->Get(tpl_idx_), this->tuples_per_page_ * logical_page_index + tpl_idx_);
 	}
 
+	// Prefix increment
 	HeapIterator &operator++() {
 		this->LoadPage();
 
@@ -261,8 +262,7 @@ public:
 		}
 
 		return *this;
-
-	} // Prefix increment
+	}
 
 	void LoadPage() {
 		if (!this->current_page_ || this->current_page_->disk_index_ != *this->page_idx_) {
@@ -408,20 +408,19 @@ private:
 template <typename Type, typename MatchType = Type>
 class Table {
 public:
-	Table(std::string delta_storage_fname, std::vector<index> &data_page_indexes, std::vector<index> &btree_indexes,
-	      BufferPool *bp, Graph *g)
+	Table(std::string delta_storage_fname, std::vector<index> &data_page_indexes, BufferPool *bp, Graph *g)
 	    : bp_ {bp}, g_ {g}, ds_ {std::make_unique<DeltaStorage>(delta_storage_fname)},
-	      data_page_indexes_ {data_page_indexes}, btree_indexes_ {btree_indexes},
-	      tuples_per_page_ {PageSize / (sizeof(bool) + sizeof(Type))}, use_match_to_index_ {false} {
+	      data_page_indexes_ {data_page_indexes}, tuples_per_page_ {PageSize / (sizeof(bool) + sizeof(Type))},
+	      use_match_to_index_ {false} {
 
 		this->tree_ = new SearchTree<Type, MatchType, Type>(this, Identity<Type>);
 	}
 
-	Table(std::string delta_storage_fname, std::vector<index> &data_page_indexes, std::vector<index> &btree_indexes,
-	      BufferPool *bp, Graph *g, std::function<MatchType(const Type &)> transform)
+	Table(std::string delta_storage_fname, std::vector<index> &data_page_indexes, BufferPool *bp, Graph *g,
+	      std::function<MatchType(const Type &)> transform)
 	    : bp_ {bp}, g_ {g}, ds_ {std::make_unique<DeltaStorage>(delta_storage_fname)},
-	      data_page_indexes_ {data_page_indexes}, btree_indexes_ {btree_indexes},
-	      tuples_per_page_ {PageSize / (sizeof(bool) + sizeof(Type))}, use_match_to_index_ {true} {
+	      data_page_indexes_ {data_page_indexes}, tuples_per_page_ {PageSize / (sizeof(bool) + sizeof(Type))},
+	      use_match_to_index_ {true} {
 
 		this->tree_ = new SearchTree<Type, MatchType, Type>(this, Identity<Type>);
 
@@ -627,14 +626,11 @@ public:
 	}
 
 private:
-
 	// heap data pages
 	unsigned int tuples_per_page_;
 
 	std::vector<index> &data_page_indexes_;
 	index current_page_idx_ = 0;
-
-	std::vector<index> &btree_indexes_;
 
 	SearchTree<Type, MatchType, Type> *tree_;
 

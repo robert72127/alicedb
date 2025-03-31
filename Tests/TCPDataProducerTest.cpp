@@ -58,7 +58,6 @@ void print_name(const AliceDB::Tuple<Name> &current_tuple){
 
 
 
-// generate bunch of people and write this data to some file, thanks chat gpt
 std::array<std::string, 100> surnames = {
         "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez",
         "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin",
@@ -100,13 +99,9 @@ void generate_dummy_data(){
 }
 
 
-
-
 const int PORT = 8080;
 const char* HOST="127.0.0.1"; // use local host as ip address
 const int BUFFER_SIZE = 1024;
-
-
 
 
 
@@ -129,25 +124,21 @@ void Server(std::vector<std::string> & messages, bool *stop){
     int opt = 1;
     //set socket options to allow reuse of the address and port
     if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))){
-        //std::cerr<<"Failed to setsocket options\n";
         close(server_fd);
         return;
     }
 
     if(bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0 ){
-        //std::cerr<<"Failed to bind\n";
         close(server_fd);
         return;
     }
 
     // listen for connections
     if(listen(server_fd,3) < 0){
-        //std::cerr<<"Listen failed\n";
         close(server_fd);
         return;
     }
 
-    //std::cout<< "Server listening on\nIP: " << HOST << "\nport: " << PORT<< std::endl;
     struct timeval timeout;
     timeout.tv_sec = 1;  // 1 second timeout
     timeout.tv_usec = 0;
@@ -155,7 +146,6 @@ void Server(std::vector<std::string> & messages, bool *stop){
     // accept and handle connections
     while(*stop == false){
         //std::cout << "Waiting for connections...\n";
-
         // Initialize file descriptor set
         fd_set readfds;
         FD_ZERO(&readfds);
@@ -169,13 +159,10 @@ void Server(std::vector<std::string> & messages, bool *stop){
         int activity = select(max_fd + 1, &readfds, NULL, NULL, &current_timeout);
 
         if (activity < 0 && errno != EINTR) {
-            //std::cerr << "select error\n";
             break;
         }
 
         if (activity == 0) {
-            //std::cout << "No incoming connections within timeout period.\n";
-            // Perform other tasks or continue
             continue;
         }
 
@@ -185,11 +172,9 @@ void Server(std::vector<std::string> & messages, bool *stop){
 
             int new_socket = accept(server_fd, (struct sockaddr*)&client_address, &client_addr_len);
             if(new_socket < 0){
-               //std::cerr << "Accept failed: " << strerror(errno) << "\n"; 
                continue;
             }
 
-            //std::cout << "Connected to client: " << inet_ntoa(client_address.sin_addr)  << ":" << ntohs(client_address.sin_port) << "\n";
 
             for(auto &message: messages){
                 // send length firs
@@ -200,7 +185,6 @@ void Server(std::vector<std::string> & messages, bool *stop){
                     std::cerr << "Failed to send message to client.\n";
                     return;
                 } else {
-                    //std::cout << "Sent message to client: " << message <<std::endl;;
                 }
             }
 
@@ -208,7 +192,7 @@ void Server(std::vector<std::string> & messages, bool *stop){
         }
 
     }
-    //std::cout<<"Shutting down the server thread\n";
+    
     close(server_fd);
 
 }
@@ -292,7 +276,6 @@ TEST(TCP_TEST, simple_tcp){
     auto g = db->CreateGraph();
 
 
-    //Client();
 
     auto *view = 
         g->View(
@@ -311,11 +294,9 @@ TEST(TCP_TEST, simple_tcp){
 
 
     // debugging
-    
     for(auto it = view->begin() ; it != view->end(); ++it){
         print_name(*it);
     }
-    
 
     *stop = true;
     if(server_thread.joinable())

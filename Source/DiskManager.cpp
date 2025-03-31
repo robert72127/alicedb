@@ -86,7 +86,6 @@ DiskManager::~DiskManager() {
 
 	// write all dirty pages from buffer pool
 	// more efective than calling write one by one
-
 	std::unique_lock<std::mutex> lock(this->work_mutex_);
 
 	this->set_promise_ = false;
@@ -199,7 +198,7 @@ std::future<bool> DiskManager::ReadPage(const index &in_memory_pid) {
 		this->request_count_++;
 		this->submit_work_requests_.emplace_back(std::move(req_));
 
-		// if threshold reached notify worker which will perform job
+		// if threshold reached, notify worker which will perform job
 
 		if (this->request_count_ >= this->disk_op_threshold_) {
 			this->perform_disk_op_ = true;
@@ -413,7 +412,6 @@ void DiskManager::WriteMetadata(std::filesystem::path metadata_path) {
 void DiskManager::WorkerThread() {
 	try {
 		while (true) {
-			// sleep untill
 
 			std::unique_lock<std::mutex> lock(this->work_mutex_);
 			this->condition_var_.wait_for(lock, std::chrono::microseconds(this->sleep_duration_ms_),

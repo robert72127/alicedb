@@ -17,7 +17,6 @@ struct TablePage {
 
 	/**
 	 * @brief array like structure over BufferPool page,
-	 * with switchable underlying page
 	 * @todo optimize, use bit packing for slots */
 	TablePage(BufferPool *bp, const index &on_disk_pid, size_t tuple_count) : bp_ {bp}, tuple_count_ {tuple_count} {
 		if (!this->bp_->GetPageWriteable(&in_memory_pid_, on_disk_pid)) {
@@ -111,7 +110,6 @@ struct TablePage {
 };
 
 /**  Per Table readonly wrapper for BufferPool page
- * to get content of other page, just switch underlying using UpdateTable
  */
 template <typename Type>
 struct TablePageReadOnly {
@@ -129,7 +127,7 @@ struct TablePageReadOnly {
 
 		const char *data = this->bp_->GetDataReadonly(this->in_memory_pid_);
 		this->slots_ = reinterpret_cast<const bool *>(data);
-		// for now each index is stored as char, despie fact we only use one bit
+		// for now each index is stored as char, despite fact we only use one bit
 		data += tuple_count;
 		this->storage_ = data;
 		this->disk_index_ = on_disk_pid;

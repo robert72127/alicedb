@@ -58,7 +58,7 @@ bool BufferPool::GetPageReadonly(index *in_memory_pid, const index &on_disk_pid)
 		std::shared_ptr<PageMetadata> pm = this->pages_metadata_[page_index];
 
 		pm->page_mutex.lock_shared();
-		// ok increase pin count and return page index
+		// increase pin count and return page index
 		pm->pin_count++;
 		pm->state = STATE::SHARED_LOCKED;
 
@@ -71,7 +71,7 @@ bool BufferPool::GetPageReadonly(index *in_memory_pid, const index &on_disk_pid)
 		return true;
 	}
 
-	// ok page is not present in bufferpool
+	// if we are here page is not present in bufferpool
 
 	// first get free page from free_pages_
 	*in_memory_pid = this->GetFreePage(buffer_lock);
@@ -108,7 +108,7 @@ bool BufferPool::GetPageWriteable(index *in_memory_pid, const index &on_disk_pid
 		std::shared_ptr<PageMetadata> pm = this->pages_metadata_[page_index];
 
 		pm->page_mutex.lock();
-		// ok increase pin count and return page index
+		// increase pin count and return page index
 		pm->pin_count = 1;
 		pm->state = STATE::UNIQUE_LOCKED;
 
@@ -122,7 +122,7 @@ bool BufferPool::GetPageWriteable(index *in_memory_pid, const index &on_disk_pid
 		return true;
 	}
 
-	// ok page is not present in bufferpool
+	// if we are here page is not present in bufferpool
 
 	// first get free page from free_pages_
 	*in_memory_pid = this->GetFreePage(buffer_lock);
@@ -146,7 +146,7 @@ bool BufferPool::GetPageWriteable(index *in_memory_pid, const index &on_disk_pid
 }
 
 index BufferPool::CreatePage() {
-	// first get free page
+	// get free page
 	std::unique_lock<std::mutex> buffer_lock(this->buffer_mutex_);
 	index in_memory_pid = this->GetFreePage(buffer_lock);
 

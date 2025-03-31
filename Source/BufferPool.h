@@ -118,7 +118,6 @@ public:
 	/** @brief Create bufferpool, allocate page_count * PageSize of memory */
 	BufferPool();
 
-
 	/** @brief Shut down buffer pool
 	 * since disk manager will be closed first and will take
 	 * care of writing diry indexes here we will just deallocate memory
@@ -175,7 +174,7 @@ public:
 	index GetDiskIndex(const index &in_memory_pid);
 
 private:
-	/* always return but might wait
+	/** @brief always return but might wait
 	  assume caller holds buffer_mutex_ locked
 	  @return id of clean buffer_pool_page
 	*/
@@ -196,11 +195,9 @@ private:
 	std::map<index, index> disk_to_memory_mapping_;
 
 	// this mutex is needed to be held for
-	// evictions,
-	// getting pages from free pages list
+	// evictions, and getting pages from free pages list
 	std::mutex buffer_mutex_;
 
-	// std::set<index> free_pages_;
 	IndexStorage free_pages_;
 	std::condition_variable new_free_page_;
 

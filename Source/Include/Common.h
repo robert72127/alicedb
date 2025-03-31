@@ -8,7 +8,6 @@ namespace AliceDB {
 #define PageSize 4096
 
 using index = long long;
-
 using timestamp = unsigned long long;
 
 struct Delta {
@@ -16,7 +15,6 @@ struct Delta {
 	int count;
 };
 
-// used by cache to transfer data
 template <typename Type>
 struct Tuple {
 	Delta delta;

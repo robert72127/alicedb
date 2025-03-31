@@ -67,7 +67,6 @@ std::array<float, 50> dogprices = {
 
 // this isn't required part, but we just need to create our data files
 void prepare_people_data_file(std::string people_fname){
-    // Seed the random number generator
     std::srand(std::time(nullptr));
 
     // cool we can create  100 00 00 unique people
@@ -79,15 +78,14 @@ void prepare_people_data_file(std::string people_fname){
     int cnt = 0;
     for (auto &name : names){
         for(auto &surname: surnames ){
-                int age = 50;// std::rand() % 101; // Random number between 0 and 100
+                int age = 50;
                 
-                int dog_race_nr = 1; //std::rand() % 50;
+                int dog_race_nr = 1; 
                 
-                float account_ballance = 100;// (std::rand() / (float)RAND_MAX) * 2000.0f;
+                float account_ballance = 100;
 
                 std::string person_str = "insert " + std::to_string(AliceDB::get_current_timestamp() ) 
                     + " "  + name + " " + surname + " " + dogbreeds[dog_race_nr] + " "  +  std::to_string(age) + " " +std::to_string(account_ballance);
-                //std::cout << test_str <<std::endl;
                 people_writter << person_str << std::endl;
                 cnt++;
                 if(cnt > 1){ break;}
@@ -100,7 +98,6 @@ void prepare_people_data_file(std::string people_fname){
 
 // this isn't required part, but we just need to create our data files
 void prepare_people_data_file_random(std::string people_fname){
-    // Seed the random number generator
     std::srand(std::time(nullptr));
 
     // cool we can create  100 00 00 unique people
@@ -120,7 +117,6 @@ void prepare_people_data_file_random(std::string people_fname){
 
                 std::string person_str = "insert " + std::to_string(AliceDB::get_current_timestamp() ) 
                     + " "  + name + " " + surname + " " + dogbreeds[dog_race_nr] + " "  +  std::to_string(age) + " " +std::to_string(account_ballance);
-                //std::cout << test_str <<std::endl;
                 people_writter << person_str << std::endl;
                 cnt++;
                 if(cnt > 10){ break;}
@@ -151,7 +147,6 @@ void prepare_dog_data_file(std::string dogs_fname){
 
 
 // define our input data
-
 struct Person {
     std::array<char, 50> name;
     std::array<char, 50> surname;
@@ -269,7 +264,6 @@ bool parsePerson(std::istringstream &iss, Person *p) {
             std::strncpy(p->surname.data(), surname, sizeof(p->surname));
             std::strncpy(p->favourite_dog_race.data(), favourite_dog_race, sizeof(p->favourite_dog_race));
 
-//            std::cout << (char*)p << std::endl; 
             return true;
 }
 
@@ -353,7 +347,6 @@ TEST(MULTINODETEST, INSERTS){
 
 // this isn't required part, but we just need to create our data files
 void prepare_people_data_delete_test(std::string people_fname){
-    // Seed the random number generator
     std::srand(std::time(nullptr));
 
     // cool we can create  100 00 00 unique people
@@ -361,7 +354,7 @@ void prepare_people_data_delete_test(std::string people_fname){
 
     std::ofstream people_writter{people_fname};
     
-    int age = std::rand() % 101; // Random number between 0 and 100
+    int age = std::rand() % 101; 
                 
     int dog_race_nr = std::rand() % 50;
                 
@@ -373,7 +366,7 @@ void prepare_people_data_delete_test(std::string people_fname){
 
     std::string person_str = "insert " + std::to_string(AliceDB::get_current_timestamp() ) 
                     + " "  + name + " " + surname + " " + dogbreeds[dog_race_nr] + " "  +  std::to_string(age) + " " +std::to_string(account_ballance);
-    //std::cout << test_str <<std::endl;
+    
     people_writter << person_str << std::endl;
     people_writter << person_str << std::endl;
     
@@ -462,7 +455,6 @@ TEST(DELETE_TEST, DELETE_DISTINCT){
 
 
 void prepare_people_data_delete_test_future(std::string people_fname){
-    // Seed the random number generator
     std::srand(std::time(nullptr));
 
     // cool we can create  100 00 00 unique people
@@ -482,7 +474,7 @@ void prepare_people_data_delete_test_future(std::string people_fname){
 
     std::string person_str = "insert " + std::to_string(AliceDB::get_current_timestamp() ) 
                     + " "  + name + " " + surname + " " + dogbreeds[dog_race_nr] + " "  +  std::to_string(age) + " " +std::to_string(account_ballance);
-    //std::cout << test_str <<std::endl;
+    
     people_writter << person_str << std::endl;
     people_writter << person_str << std::endl;
     
@@ -570,7 +562,6 @@ TEST(DELETE_TEST, DELETE_DISTINCT_IN_FUTURE){
 
 
 void prepare_people_data_delete_test_non_zero_frontier(std::string people_fname){
-    // Seed the random number generator
     std::srand(std::time(nullptr));
 
     // cool we can create  100 00 00 unique people
@@ -590,7 +581,7 @@ void prepare_people_data_delete_test_non_zero_frontier(std::string people_fname)
 
     std::string person_str = "insert " + std::to_string(AliceDB::get_current_timestamp() ) 
                     + " "  + name + " " + surname + " " + dogbreeds[dog_race_nr] + " "  +  std::to_string(age) + " " +std::to_string(account_ballance);
-    //std::cout << test_str <<std::endl;
+    
     people_writter << person_str << std::endl;
     
     person_str = "delete " + std::to_string( (AliceDB::get_current_timestamp() + 3) ) 
@@ -637,7 +628,6 @@ TEST(DELETE_TEST, DELETE_NON_ZERO_FRONTIER){
 
 
 void prepare_data_garbage_collection_test(std::string people_fname){
-    // Seed the random number generator
     std::srand(std::time(nullptr));
 
     // cool we can create  100 00 00 unique people
@@ -655,14 +645,14 @@ void prepare_data_garbage_collection_test(std::string people_fname){
         for(auto &surname: surnames ){
                 int age =  std::rand() % 101; // Random number between 0 and 100
                 
-                int dog_race_nr = 1; //std::rand() % 50;
+                int dog_race_nr = 1; 
                 
-                float account_ballance = 100;// (std::rand() / (float)RAND_MAX) * 2000.0f;
+                float account_ballance = 100;
 
                 // half of tuples will be very old
                 std::string person_str = "insert " + std::to_string(AliceDB::get_current_timestamp() / (1 + cnt % 2)  ) 
                     + " "  + name + " " + surname + " " + dogbreeds[dog_race_nr] + " "  +  std::to_string(age) + " " +std::to_string(account_ballance);
-                //std::cout << test_str <<std::endl;
+                
                 people_writter << person_str << std::endl;
                 cnt++;
                 if(cnt >= max){ break;}

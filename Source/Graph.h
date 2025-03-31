@@ -22,7 +22,7 @@ enum class NodeState { PROCESSED, NOT_PROCESSED, PROCESSING };
 /**
  * @brief Graph of relational algebra processing nodes
  * where operators such as Filter etc are wrappers around Node with type inference,
- * and automatically keep track of node inputs and graph they belong to
+ * extra metadata and automatically tracking edges, and graph they belong to
  *
  * Graph is started by calling Start method, after that no new node can be added
  */
@@ -47,8 +47,6 @@ public:
 		DELTAFILENAME <metafilename>
 		PAGES <page_idx ....>
 		ENDPAGES
-		BTREEPAGES <page_idx ...>
-		ENDBTREEPAGES <page_idx...>
 		ENDINDEX
 		*/
 		std::string graph_metadata_file = this->graph_directory_ / "graph_metadata";
@@ -148,24 +146,6 @@ public:
 				throw std::runtime_error("Did not find ENDPAGES token");
 			}
 
-			// Next, expect the "BTREEPAGES" block.
-			input_stream >> token;
-			if (token != "BTREEPAGES") {
-				throw std::runtime_error("Expected BTREEPAGES, got: " + token);
-			}
-			// Read all btree page indices until the ENDBTREEPAGES token.
-			while (input_stream >> token && token != "ENDBTREEPAGES") {
-				std::istringstream iss(token);
-				index btree_page;
-				if (!(iss >> btree_page)) {
-					throw std::runtime_error("Error reading btree page index: " + token);
-				}
-				meta.btree_pages_.push_back(btree_page);
-			}
-			if (token != "ENDBTREEPAGES") {
-				throw std::runtime_error("Did not find ENDBTREEPAGES token");
-			}
-
 			// Finally, expect the "ENDINDEX" token.
 			input_stream >> token;
 			if (token != "ENDINDEX") {
@@ -218,12 +198,6 @@ public:
 				output_stream << " " << page;
 			}
 			output_stream << "\nENDPAGES\n";
-
-			output_stream << "BTREEPAGES";
-			for (const auto &btree_page : meta.btree_pages_) {
-				output_stream << " " << btree_page;
-			}
-			output_stream << "\nENDBTREEPAGES\n";
 
 			output_stream << "ENDINDEX\n";
 		}
@@ -454,7 +428,7 @@ public:
 	 * @return all nodes from this graph that can be processed
 	 */
 	std::vector<Node *> GetNext() {
-		std::scoped_lock{graph_latch_};
+		std::scoped_lock {graph_latch_};
 		if (AllProcesedPreviousLevel()) {
 			// ok all nodes processed at last level we can restart
 			if (current_level_ == this->levels_.size()) {
@@ -490,7 +464,7 @@ public:
 
 	// sets node state
 	void Produced(Node *node) {
-		std::scoped_lock{graph_latch_};
+		std::scoped_lock {graph_latch_};
 		// set correct state to current node
 		this->nodes_state_[node] = {NodeState::PROCESSED};
 	}
@@ -501,7 +475,7 @@ public:
 	 * this is called by WorkerPool->Start(Graph *g)
 	 */
 	void Start() {
-		std::scoped_lock{graph_latch_};
+		std::scoped_lock {graph_latch_};
 		// after calling process once graph no longer will accept adding new nodes
 		this->is_graph_running_ = true;
 		if (this->topo_graph_.empty()) {
@@ -677,7 +651,7 @@ private:
 		this->next_table_index_++;
 		if (!this->tables_metadata_.contains(table_index)) {
 			this->tables_metadata_[table_index] = MetaState {
-			    {}, {},         {}, {}, this->graph_directory_ / ("delta_log_" + std::to_string(table_index) + ".bin"),
+			    {}, {},         {}, this->graph_directory_ / ("delta_log_" + std::to_string(table_index) + ".bin"),
 			    0,  table_index};
 		}
 		return table_index;

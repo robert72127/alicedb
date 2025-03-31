@@ -108,9 +108,6 @@ public:
 		return g;
 	}
 
-	/**
-	 * @brief start performing computations on given graph
-	 */
 	void StartGraph(Graph *g) {
 		if (pool_) {
 			pool_->Start(g);
@@ -129,15 +126,16 @@ public:
 
 private:
 	std::filesystem::path database_directory_;
+
 	// Shared resources:
 	BufferPool *bp_;
 	DiskManager *dm_;
 	WorkerPool *pool_;
 	GarbageCollectSettings *gb_settings_;
 
+	// keep track of graphs
 	std::vector<Graph *> graphs_;
 	unsigned int graph_count_;
-
 	bool shutdown_ = false;
 };
 

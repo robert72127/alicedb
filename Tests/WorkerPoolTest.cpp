@@ -64,7 +64,6 @@ void prepare_test_data_files(std::string people_fname){
 
                 std::string person_str = "insert " + std::to_string(AliceDB::get_current_timestamp() ) 
                     + " "  + name + " " + surname + " "  +  std::to_string(age) + " " +std::to_string(account_ballance);
-                //std::cout << test_str <<std::endl;
                 people_writter << person_str << std::endl;
         }
     }
@@ -87,7 +86,6 @@ bool parsePerson(std::istringstream &iss, Person *p) {
             std::strncpy(p->name.data(), name, sizeof(p->name));
             std::strncpy(p->surname.data(), surname, sizeof(p->surname));
 
-//            std::cout << (char*)p << std::endl; 
             return true;
 }
 

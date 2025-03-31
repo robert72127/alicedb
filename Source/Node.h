@@ -20,7 +20,6 @@ namespace AliceDB {
 
 struct MetaState {
 	std::vector<index> pages_;
-	std::vector<index> btree_pages_;
 	std::set<index> recompute_idexes_;
 	std::set<index> not_emited_;
 	std::string delta_filename_;
@@ -120,7 +119,7 @@ enum class ProducerType { FILE, FILE_BINARY, TCPCLIENT };
 
 /**  @brief Source node is responsible for producing data through Compute function and
  * then writing output to  out_cache. Creator of this
- * node needs to specify how long delayed data might arrive
+ * node needs to specify how late delayed data might arrive
  */
 template <typename Type>
 class SourceNode : public TypedNode<Type> {
@@ -219,7 +218,7 @@ private:
 /**
  * @brief out node that collect outputs and allow for iterating internal storage
  */
-/** @todo add optional callback after processing nodes */
+/** @todo add optional callback after processing nodes, to not limit ourself to iterator */
 template <typename Type>
 class SinkNode : public TypedNode<Type> {
 public:
@@ -232,7 +231,7 @@ public:
 		this->next_clean_ts_ = this->ts_ + this->gb_settings_.clean_freq_;
 
 		// init table from graph metastate based on index
-		this->table_ = new Table<Type>(meta.delta_filename_, meta.pages_, meta.btree_pages_, bp, graph_);
+		this->table_ = new Table<Type>(meta.delta_filename_, meta.pages_, bp, graph_);
 	}
 
 	~SinkNode() {
@@ -254,7 +253,7 @@ public:
 
 		this->in_node_->CleanCache();
 
-		// dont allow for table modification while iterating
+		// dont allow for garbage collection while iterating
 		if (iterating_count_.load() == 0) {
 			// periodically call garbage collector
 			if (this->gb_settings_.use_garbage_collector && this->next_clean_ts_ < this->ts_) {
@@ -264,12 +263,11 @@ public:
 			}
 		}
 
-		// never produces
 		this->CleanWork();
 	}
 
 	// since all sink does is store state we can treat incache as out cache when we use sink(view)
-	// as source
+	// as source, which should never be done actually :)
 	Cache<Type> *Output() {
 		return this->in_node_->Output();
 	}
@@ -520,18 +518,6 @@ private:
 // we need distinct node that will:
 // for tuples that have positive count -> produce tuple with count 1 if positive
 // for tuples that have negative count -> produce tuple with count 0 otherwise
-
-// but the catch is: what this node will emit depends fully on previouse state:
-/*
-        if previous state was 0
-                if now positive emit 1
-                if now negative don't emit
-        if previouse state was 1
-                if now positive don't emit
-                if now negative emit -1
-        if there was no previous state:
-          if now positive emit 1
-*/
 template <typename Type>
 class DistinctNode : public TypedNode<Type> {
 public:
@@ -547,13 +533,10 @@ public:
 		this->out_cache_ = new Cache<Type>(DEFAULT_CACHE_SIZE);
 
 		// init table from graph metastate based on index
-
-		this->table_ = new Table<Type>(meta.delta_filename_, meta.pages_, meta.btree_pages_, bp, graph_);
+		this->table_ = new Table<Type>(meta.delta_filename_, meta.pages_, bp, graph_);
 	}
 
 	~DistinctNode() {
-		// update meta ts
-
 		delete out_cache_;
 		delete table_;
 	}
@@ -593,26 +576,15 @@ public:
 
 		                if previous state was 0
 		                        if now positive emit 1
-		                        if now negative don't emit
+		                        if now negative emit 0
 		                if previouse state was 1
-		                        if now positive don't emit
+		                        if now positive emit 0
 		                        if now negative emit -1
 
 		                if it's first iteration of this Node we need to always emit if positive
-
-
-		    so if it's time to emit:
-
-		    we iter all indexes, and then:
-
-
-		    if oldest version is newer than previous ts we need to always emit
-		    else we either emit or not based on: oldest delta, and deltas up to current timestamp
-
-		    then we can compact
 		*/
 		if (this->compact_) {
-			// delta_count for oldest keept verson fro this we can deduce what tuples
+			// from delta_count for oldest keept verson we can deduce what tuples
 			// to emit;
 			//  out node will always have count of each tuple as either 0 or 1
 
@@ -647,8 +619,6 @@ public:
 				// tuple was emited, we don't update count, but we need to update timestamp so garbage collector in out
 				// node won't delete it
 				else if (!prev_not_emited) {
-					// count not chaged, but we still should emit something so that garbage collector won't delete this
-					// tuple
 					Type tp = this->table_->Get(idx);
 					this->out_cache_->Insert(tp, Delta {this->ts_, 0});
 				}
@@ -837,15 +807,12 @@ public:
 
 		// init table from graph metastate based on index
 
-		this->left_table_ =
-		    new Table<LeftType>(left_meta.delta_filename_, left_meta.pages_, left_meta.btree_pages_, bp, graph_);
+		this->left_table_ = new Table<LeftType>(left_meta.delta_filename_, left_meta.pages_, bp, graph_);
 
 		// we also need to set ts for the node, we will use left ts for it, thus right ts will always be 0
 
 		// get reference to corresponding metastate
-
-		this->right_table_ =
-		    new Table<RightType>(left_meta.delta_filename_, left_meta.pages_, left_meta.btree_pages_, bp, graph_);
+		this->right_table_ = new Table<RightType>(left_meta.delta_filename_, left_meta.pages_, bp, graph_);
 	}
 
 	~StatefulBinaryNode() {
@@ -909,8 +876,6 @@ protected:
 
 	timestamp &previous_ts_;
 
-	// timestamp will be used to track valid tuples
-	// after update propagate it to input nodes
 	bool compact_ = false;
 };
 
@@ -1085,14 +1050,14 @@ public:
 		}
 
 		// compute right cache against left table
-		// right table
+		// left table
 		for (auto it = this->left_table_->begin(); it != this->left_table_->end(); ++it) {
 			auto [data, idx] = it.Get();
-			// left cache
+			// right cache
 			while (this->in_cache_right_->HasNext()) {
 				Tuple<InTypeLeft> in_right_tuple = this->in_cache_right_->GetNext();
 
-				// deltas from right table
+				// deltas from left table
 				const std::vector<Delta> &left_deltas = this->left_table_->Scan(idx);
 				Tuple<OutType> out_tuple;
 				out_tuple.data = this->join_layout_(*data, in_right_tuple.data);
@@ -1173,15 +1138,14 @@ public:
 
 		// init table from graph metastate based on index
 
-		this->left_table_ = new Table<InTypeLeft, MatchType>(left_meta.delta_filename_, left_meta.pages_,
-		                                                     left_meta.btree_pages_, bp, graph_, get_match_left);
+		this->left_table_ =
+		    new Table<InTypeLeft, MatchType>(left_meta.delta_filename_, left_meta.pages_, bp, graph_, get_match_left);
 
 		// we also need to set ts for the node, we will use left ts for it, thus right ts will always be 0
 
 		// get reference to corresponding metastate
-
-		this->right_table_ = new Table<InTypeRight, MatchType>(left_meta.delta_filename_, left_meta.pages_,
-		                                                       left_meta.btree_pages_, bp, graph_, get_match_right);
+		this->right_table_ =
+		    new Table<InTypeRight, MatchType>(left_meta.delta_filename_, left_meta.pages_, bp, graph_, get_match_right);
 	}
 
 	// this function changes
@@ -1194,7 +1158,6 @@ public:
 			while (this->in_cache_right_->HasNext()) {
 				Tuple<InTypeRight> in_right_tuple = this->in_cache_right_->GetNext();
 				// if left and right caches match on data put it into out_cache with new delta
-
 				if (this->Compare(&in_left_tuple.data, &in_right_tuple.data)) {
 					Tuple<OutType> out_tuple;
 					out_tuple.delta = {std::max(in_left_tuple.delta.ts, in_right_tuple.delta.ts),
@@ -1363,8 +1326,6 @@ private:
 	MetaState &left_meta_;
 	MetaState &right_meta_;
 
-	// timestamp will be used to track valid tuples
-	// after update propagate it to input nodes
 	bool compact_ = false;
 };
 
@@ -1386,13 +1347,11 @@ public:
 		this->ts_ = get_current_timestamp();
 		this->next_clean_ts_ = this->ts_ + this->gb_settings_.clean_freq_;
 
-		// there will be single tuple emited at once probably, if not it will get
-		// resized so chill
+		// there won't be much emited, but if there will be more, it's just resized
 		this->out_cache_ = new Cache<OutType>(2);
 
 		// init table from graph metastate based on index
-		this->table_ =
-		    new Table<InType, MatchType>(meta.delta_filename_, meta.pages_, meta.btree_pages_, bp, graph_, get_match);
+		this->table_ = new Table<InType, MatchType>(meta.delta_filename_, meta.pages_, bp, graph_, get_match);
 	}
 
 	~AggregateByNode() {
@@ -1441,7 +1400,6 @@ public:
 			//  out node will always have count of each tuple as either 0 or 1
 
 			// insert and delete index in out edge cache, for this match type
-
 			for (const auto &idx : recompute_indexes_) {
 				InType data = this->table_->Get(idx);
 				MatchType match = this->get_match_(data);

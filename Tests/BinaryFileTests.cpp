@@ -86,7 +86,6 @@ void prepare_test_data_file_binary(const std::string &bin_fname) {
 TEST(BINARY_DATA_TEST, FILTER){
      std::string bin_fname = "people.bin";
     
-    // Create binary file with test data.
     prepare_test_data_file_binary(bin_fname);
     
     int worker_threads_cnt = 1;

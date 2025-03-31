@@ -14,7 +14,7 @@
 
 namespace AliceDB {
 
-#define DISK_OP_THRESHOLD 0.01 // (0.01)
+#define DISK_OP_THRESHOLD 0.01
 
 enum class DiskOp { Write, Read };
 
@@ -33,7 +33,6 @@ public:
 
 	/**
 	 * @brief ForceFlush all op's
-	 * Compact database file
 	 * Shut down worker thread
 	 */
 	~DiskManager();
@@ -74,7 +73,7 @@ public:
 
 	/** @brief Return's free page,
 	 * first look's into the list of holes
-	 * if it's empty returns new unused page
+	 * if it's empty returns unused page
 	 * if there are no pages left, increase disk
 	 * file size twice
 	 * @return index of the page
@@ -103,9 +102,8 @@ private:
 	 */
 	int SubmitDiskRequest();
 
-	/** @brief  worker thread that is waken up when request queue is full ||
-	   Disk needs to be compacted or on ForceFlush
-	*/
+	/** @brief  worker thread that is waken up when requests are submitted or on ForceFlush
+	 */
 	void WorkerThread();
 
 	const std::filesystem::path file_path_;

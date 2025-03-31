@@ -70,8 +70,6 @@ void prepare_people_data_file(std::string people_fname){
     // Seed the random number generator
     std::srand(std::time(nullptr));
 
-    // cool we can create  100 00 00 unique people
-    // create file from it
 
     std::ofstream people_writter{people_fname};
     
@@ -79,15 +77,15 @@ void prepare_people_data_file(std::string people_fname){
     int cnt = 0;
     for (auto &name : names){
         for(auto &surname: surnames ){
-                int age = 50;// std::rand() % 101; // Random number between 0 and 100
+                int age = 50;
                 
-                int dog_race_nr = 1; //std::rand() % 50;
+                int dog_race_nr = 1; 
                 
-                float account_ballance = 100;// (std::rand() / (float)RAND_MAX) * 2000.0f;
+                float account_ballance = 100;
 
                 std::string person_str = "insert " + std::to_string(AliceDB::get_current_timestamp() ) 
                     + " "  + name + " " + surname + " " + dogbreeds[dog_race_nr] + " "  +  std::to_string(age) + " " +std::to_string(account_ballance);
-                //std::cout << test_str <<std::endl;
+                
                 people_writter << person_str << std::endl;
                 cnt++;
                 if(cnt > 1){ break;}
@@ -103,7 +101,6 @@ void prepare_people_data_file_random(std::string people_fname){
     // Seed the random number generator
     std::srand(std::time(nullptr));
 
-    // cool we can create  100 00 00 unique people
     // create file from it
 
     std::ofstream people_writter{people_fname};
@@ -120,7 +117,7 @@ void prepare_people_data_file_random(std::string people_fname){
 
                 std::string person_str = "insert " + std::to_string(AliceDB::get_current_timestamp() ) 
                     + " "  + name + " " + surname + " " + dogbreeds[dog_race_nr] + " "  +  std::to_string(age) + " " +std::to_string(account_ballance);
-                //std::cout << test_str <<std::endl;
+                
                 people_writter << person_str << std::endl;
                 cnt++;
                 if(cnt > 10){ break;}
@@ -269,7 +266,6 @@ bool parsePerson(std::istringstream &iss, Person *p) {
             std::strncpy(p->surname.data(), surname, sizeof(p->surname));
             std::strncpy(p->favourite_dog_race.data(), favourite_dog_race, sizeof(p->favourite_dog_race));
 
-//            std::cout << (char*)p << std::endl; 
             return true;
 }
 
