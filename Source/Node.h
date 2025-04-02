@@ -91,7 +91,7 @@ protected:
 
 	std::mutex node_lock_;
 
-	// set by in node compute when it produced some tuples
+	// set by in node compute when it produced some changes
 	// or by outnode update timestamp when it's time to compact
 	bool has_work_;
 
@@ -109,7 +109,7 @@ public:
 	virtual ~TypedNode() {};
 
 	/**
-	 * @brief returns cache corresponding to output from this Tuple
+	 * @brief returns cache corresponding to output from this Change
 	 */
 	virtual Cache<OutType> *Output() = 0;
 };
@@ -163,13 +163,13 @@ public:
 		auto end = start + duration;
 		// produce some data with time limit set, into produce_cache
 		while (std::chrono::steady_clock::now() < end) {
-			Tuple<Type> prod_tuple;
-			bool success = this->produce_->next(&prod_tuple);
+			Change<Type> prod_change;
+			bool success = this->produce_->next(&prod_change);
 			if (!success) {
 				break;
 			}
 			produced = true;
-			produce_cache_->Insert(prod_tuple);
+			produce_cache_->Insert(prod_change);
 		}
 
 		this->produce_cache_->FinishInserting();
@@ -242,9 +242,9 @@ public:
 		// write in cache into out_table
 		const char *in_data;
 		while (this->in_cache_->HasNext()) {
-			Tuple<Type> in_tuple = this->in_cache_->GetNext();
-			index idx = this->table_->Insert(in_tuple.data);
-			this->table_->InsertDelta(idx, in_tuple.delta);
+			Change<Type> in_change = this->in_cache_->GetNext();
+			index idx = this->table_->Insert(in_change.data);
+			this->table_->InsertDelta(idx, in_change.delta);
 		}
 
 		if (this->compact_) {
@@ -309,10 +309,10 @@ public:
 			return *this;
 		}
 
-		Tuple<Type> operator*() {
+		Change<Type> operator*() {
 
 			auto [data, idx] = heap_iterator_.Get();
-			Tuple<Type> tpl;
+			Change<Type> tpl;
 			tpl.data = *data;
 			tpl.delta.count = 0;
 			for (auto dit : this->table_->Scan(idx)) {
@@ -365,7 +365,7 @@ private:
 
 	MetaState &meta_;
 
-	// timestamp for which we have seen all the tuples
+	// timestamp for which we have seen all the changes
 	timestamp &previous_ts_;
 
 	std::atomic<int> iterating_count_;
@@ -373,7 +373,7 @@ private:
 	bool compact_;
 };
 
-/** @brief stateless node that filters tuples based on condition function */
+/** @brief stateless node that filters changes based on condition function */
 template <typename Type>
 class FilterNode : public TypedNode<Type> {
 public:
@@ -394,9 +394,9 @@ public:
 		bool produced = false;
 		// pass function that match condition to output
 		while (this->in_cache_->HasNext()) {
-			Tuple<Type> tuple = this->in_cache_->GetNext();
-			if (this->condition_(tuple.data)) {
-				this->out_cache_->Insert(tuple);
+			Change<Type> change = this->in_cache_->GetNext();
+			if (this->condition_(change.data)) {
+				this->out_cache_->Insert(change);
 				produced = true;
 			}
 		}
@@ -463,9 +463,9 @@ public:
 	void Compute() {
 		bool produced = false;
 		while (in_cache_->HasNext()) {
-			Tuple<InType> in_tuple = this->in_cache_->GetNext();
-			OutType out_tuple = this->projection_(in_tuple.data);
-			out_cache_->Insert(out_tuple, in_tuple.delta);
+			Change<InType> in_change = this->in_cache_->GetNext();
+			OutType out_change = this->projection_(in_change.data);
+			out_cache_->Insert(out_change, in_change.delta);
 			produced = true;
 		}
 
@@ -516,8 +516,8 @@ private:
 };
 
 // we need distinct node that will:
-// for tuples that have positive count -> produce tuple with count 1 if positive
-// for tuples that have negative count -> produce tuple with count 0 otherwise
+// for changes that have positive count -> produce change with count 1 if positive
+// for changes that have negative count -> produce change with count 0 otherwise
 template <typename Type>
 class DistinctNode : public TypedNode<Type> {
 public:
@@ -559,9 +559,9 @@ public:
 
 		// first insert all new data from cache to table
 		while (this->in_cache_->HasNext()) {
-			const Tuple<Type> in_tuple = this->in_cache_->GetNext();
-			index idx = this->table_->Insert(in_tuple.data);
-			bool was_present = this->table_->InsertDelta(idx, in_tuple.delta);
+			const Change<Type> in_change = this->in_cache_->GetNext();
+			index idx = this->table_->Insert(in_change.data);
+			bool was_present = this->table_->InsertDelta(idx, in_change.delta);
 
 			recompute_indexes_.insert(idx);
 			if (!was_present) {
@@ -584,20 +584,20 @@ public:
 		                if it's first iteration of this Node we need to always emit if positive
 		*/
 		if (this->compact_) {
-			// from delta_count for oldest keept verson we can deduce what tuples
+			// from delta_count for oldest keept verson we can deduce what changes
 			// to emit;
-			//  out node will always have count of each tuple as either 0 or 1
+			//  out node will always have count of each change as either 0 or 1
 
-			// iterate only through tuples that needs recomputation
+			// iterate only through changes that needs recomputation
 			for (const auto &idx : recompute_indexes_) {
-				// iterate by delta tuple, ok since tuples are appeneded sequentially we can get index from tuple
-				// position using heap iterator, this should be fast since distinct shouldn't store that many tuples
+				// iterate by delta change, ok since changes are appeneded sequentially we can get index from change
+				// position using heap iterator, this should be fast since distinct shouldn't store that many changes
 
 				std::vector<Delta> current_idx_deltas = this->table_->Scan(idx);
 
-				// whether previous emited tuple delta had positive count
+				// whether previous emited change delta had positive count
 				bool previous_positive = current_idx_deltas[0].count > 0;
-				// this means this tuple was never emited, then we discard previous positive, since it's incorrect
+				// this means this change was never emited, then we discard previous positive, since it's incorrect
 				bool prev_not_emited = this->not_emited_.contains(idx);
 
 				int count = 0;
@@ -616,7 +616,7 @@ public:
 					this->out_cache_->Insert(tp, Delta {this->ts_, current_positive ? 1 : -1});
 					produced = true;
 				}
-				// tuple was emited, we don't update count, but we need to update timestamp so garbage collector in out
+				// change was emited, we don't update count, but we need to update timestamp so garbage collector in out
 				// node won't delete it
 				else if (!prev_not_emited) {
 					Type tp = this->table_->Get(idx);
@@ -681,7 +681,7 @@ private:
 
 	MetaState &meta_;
 
-	// timestamp will be used to track valid tuples
+	// timestamp will be used to track valid changes
 	// after update propagate it to input nodes
 	bool compact_ = false;
 
@@ -736,16 +736,16 @@ public:
 		const char *in_data;
 		char *out_data;
 		while (in_cache_left_->HasNext()) {
-			Tuple<Type> in_tuple = in_cache_left_->GetNext();
-			out_cache_->Insert(in_tuple);
+			Change<Type> in_change = in_cache_left_->GetNext();
+			out_cache_->Insert(in_change);
 			produced = true;
 		}
 		this->in_node_left_->CleanCache();
 
 		// process right input
 		while (in_cache_right_->HasNext()) {
-			Tuple<Type> in_tuple = in_cache_right_->GetNext();
-			out_cache_->Insert(in_tuple);
+			Change<Type> in_change = in_cache_right_->GetNext();
+			out_cache_->Insert(in_change);
 			produced = true;
 		}
 		this->in_node_right_->CleanCache();
@@ -896,13 +896,13 @@ public:
 		// compute right_cache against left_cache
 		// they are small and hold no indexes so we do it just by nested loop
 		while (this->in_cache_left_->HasNext()) {
-			Tuple<Type> in_left_tuple = this->in_cache_left_->GetNext();
+			Change<Type> in_left_change = this->in_cache_left_->GetNext();
 			while (this->in_cache_right_->HasNext()) {
-				Tuple<Type> in_right_tuple = this->in_cache_right_->GetNext();
+				Change<Type> in_right_change = this->in_cache_right_->GetNext();
 				// if left and right caches match on data put it into out_cache with new delta
-				if (std::memcmp(&in_left_tuple.data, &in_right_tuple.data, sizeof(Type)) == 0) {
-					this->out_cache_->Insert(in_left_tuple.data,
-					                         this->delta_function_(in_left_tuple.delta, in_right_tuple.delta));
+				if (std::memcmp(&in_left_change.data, &in_right_change.data, sizeof(Type)) == 0) {
+					this->out_cache_->Insert(in_left_change.data,
+					                         this->delta_function_(in_left_change.delta, in_right_change.delta));
 					produced = true;
 				}
 			}
@@ -910,19 +910,19 @@ public:
 
 		// compute left cache against right table
 		while (this->in_cache_left_->HasNext()) {
-			Tuple<Type> in_left_tuple = this->in_cache_left_->GetNext();
+			Change<Type> in_left_change = this->in_cache_left_->GetNext();
 
 			// get matching on data from left and iterate it's deltas
 			index idx;
-			if (this->right_table_->Search(in_left_tuple.data, &idx)) {
+			if (this->right_table_->Search(in_left_change.data, &idx)) {
 				const std::vector<Delta> &right_deltas = this->right_table_->Scan(idx);
 
-				Tuple<Type> out_tuple;
-				out_tuple.data = in_left_tuple.data;
+				Change<Type> out_change;
+				out_change.data = in_left_change.data;
 				for (auto &right_delta : right_deltas) {
-					Delta out_delta = this->delta_function_(in_left_tuple.delta, right_delta);
-					out_tuple.delta = out_delta;
-					this->out_cache_->Insert(out_tuple);
+					Delta out_delta = this->delta_function_(in_left_change.delta, right_delta);
+					out_change.delta = out_delta;
+					this->out_cache_->Insert(out_change);
 					produced = true;
 				}
 			}
@@ -931,18 +931,18 @@ public:
 		// compute right cache against left table
 		while (this->in_cache_right_->HasNext()) {
 
-			Tuple<Type> in_right_tuple = this->in_cache_right_->GetNext();
+			Change<Type> in_right_change = this->in_cache_right_->GetNext();
 
 			// get matching on data from right and iterate it's deltas
 			index idx;
-			if (this->left_table_->Search(in_right_tuple.data, &idx)) {
+			if (this->left_table_->Search(in_right_change.data, &idx)) {
 				const std::vector<Delta> &left_deltas = this->left_table_->Scan(idx);
 
-				Tuple<Type> out_tuple;
-				out_tuple.data = in_right_tuple.data;
+				Change<Type> out_change;
+				out_change.data = in_right_change.data;
 				for (auto &left_delta : left_deltas) {
-					out_tuple.delta = this->delta_function_(left_delta, in_right_tuple.delta);
-					this->out_cache_->Insert(out_tuple);
+					out_change.delta = this->delta_function_(left_delta, in_right_change.delta);
+					this->out_cache_->Insert(out_change);
 					produced = true;
 				}
 			}
@@ -952,14 +952,14 @@ public:
 
 		// insert new deltas from in_caches
 		while (this->in_cache_right_->HasNext()) {
-			Tuple<Type> in_right_tuple = this->in_cache_right_->GetNext();
-			index idx = this->right_table_->Insert(in_right_tuple.data);
-			this->right_table_->InsertDelta(idx, in_right_tuple.delta);
+			Change<Type> in_right_change = this->in_cache_right_->GetNext();
+			index idx = this->right_table_->Insert(in_right_change.data);
+			this->right_table_->InsertDelta(idx, in_right_change.delta);
 		}
 		while (this->in_cache_left_->HasNext()) {
-			Tuple<Type> in_left_tuple = this->in_cache_left_->GetNext();
-			index idx = this->left_table_->Insert(in_left_tuple.data);
-			this->left_table_->InsertDelta(idx, in_left_tuple.delta);
+			Change<Type> in_left_change = this->in_cache_left_->GetNext();
+			index idx = this->left_table_->Insert(in_left_change.data);
+			this->left_table_->InsertDelta(idx, in_left_change.delta);
 		}
 
 		// clean in_caches
@@ -1013,17 +1013,17 @@ public:
 		// compute right_cache against left_cache
 		// they are small and hold no indexes so we do it just by nested loop
 		while (this->in_cache_left_->HasNext()) {
-			Tuple<InTypeLeft> in_left_tuple = this->in_cache_left_->GetNext();
+			Change<InTypeLeft> in_left_change = this->in_cache_left_->GetNext();
 			while (this->in_cache_right_->HasNext()) {
-				Tuple<InTypeRight> in_right_tuple = this->in_cache_right_->GetNext();
+				Change<InTypeRight> in_right_change = this->in_cache_right_->GetNext();
 				// if left and right caches match on data put it into out_cache with new delta
 
-				Tuple<OutType> out_tuple;
-				out_tuple.delta = {std::max(in_left_tuple.delta.ts, in_right_tuple.delta.ts),
-				                   in_left_tuple.delta.count * in_right_tuple.delta.count};
+				Change<OutType> out_change;
+				out_change.delta = {std::max(in_left_change.delta.ts, in_right_change.delta.ts),
+				                   in_left_change.delta.count * in_right_change.delta.count};
 
-				out_tuple.data = this->join_layout_(in_left_tuple.data, in_right_tuple.data);
-				this->out_cache_->Insert(out_tuple);
+				out_change.data = this->join_layout_(in_left_change.data, in_right_change.data);
+				this->out_cache_->Insert(out_change);
 				produced = true;
 			}
 		}
@@ -1034,16 +1034,16 @@ public:
 			auto [data, idx] = it.Get();
 			// left cache
 			while (this->in_cache_left_->HasNext()) {
-				Tuple<InTypeLeft> in_left_tuple = this->in_cache_left_->GetNext();
+				Change<InTypeLeft> in_left_change = this->in_cache_left_->GetNext();
 
 				// deltas from right table
 				const std::vector<Delta> &right_deltas = this->right_table_->Scan(idx);
-				Tuple<OutType> out_tuple;
-				out_tuple.data = this->join_layout_(in_left_tuple.data, *data);
+				Change<OutType> out_change;
+				out_change.data = this->join_layout_(in_left_change.data, *data);
 				for (auto &right_delta : right_deltas) {
-					out_tuple.delta = {std::max(in_left_tuple.delta.ts, right_delta.ts),
-					                   in_left_tuple.delta.count * right_delta.count};
-					this->out_cache_->Insert(out_tuple);
+					out_change.delta = {std::max(in_left_change.delta.ts, right_delta.ts),
+					                   in_left_change.delta.count * right_delta.count};
+					this->out_cache_->Insert(out_change);
 					produced = true;
 				}
 			}
@@ -1055,16 +1055,16 @@ public:
 			auto [data, idx] = it.Get();
 			// right cache
 			while (this->in_cache_right_->HasNext()) {
-				Tuple<InTypeLeft> in_right_tuple = this->in_cache_right_->GetNext();
+				Change<InTypeLeft> in_right_change = this->in_cache_right_->GetNext();
 
 				// deltas from left table
 				const std::vector<Delta> &left_deltas = this->left_table_->Scan(idx);
-				Tuple<OutType> out_tuple;
-				out_tuple.data = this->join_layout_(*data, in_right_tuple.data);
+				Change<OutType> out_change;
+				out_change.data = this->join_layout_(*data, in_right_change.data);
 				for (auto &left_delta : left_deltas) {
-					out_tuple.delta = {std::max(in_right_tuple.delta.ts, left_delta.ts),
-					                   in_right_tuple.delta.count * left_delta.count};
-					this->out_cache_->Insert(out_tuple);
+					out_change.delta = {std::max(in_right_change.delta.ts, left_delta.ts),
+					                   in_right_change.delta.count * left_delta.count};
+					this->out_cache_->Insert(out_change);
 					produced = true;
 				}
 			}
@@ -1074,14 +1074,14 @@ public:
 
 		// insert new deltas from in_caches
 		while (this->in_cache_right_->HasNext()) {
-			Tuple<InTypeRight> in_right_tuple = this->in_cache_right_->GetNext();
-			index idx = this->right_table_->Insert(in_right_tuple.data);
-			this->right_table_->InsertDelta(idx, in_right_tuple.delta);
+			Change<InTypeRight> in_right_change = this->in_cache_right_->GetNext();
+			index idx = this->right_table_->Insert(in_right_change.data);
+			this->right_table_->InsertDelta(idx, in_right_change.delta);
 		}
 		while (this->in_cache_left_->HasNext()) {
-			Tuple<InTypeLeft> in_left_tuple = this->in_cache_left_->GetNext();
-			index idx = this->left_table_->Insert(in_left_tuple.data);
-			this->left_table_->InsertDelta(idx, in_left_tuple.delta);
+			Change<InTypeLeft> in_left_change = this->in_cache_left_->GetNext();
+			index idx = this->left_table_->Insert(in_left_change.data);
+			this->left_table_->InsertDelta(idx, in_left_change.delta);
 		}
 
 		// clean in_caches
@@ -1154,17 +1154,17 @@ public:
 		// compute right_cache against left_cache
 		// they are small and hold no indexes so we do it just by nested loop
 		while (this->in_cache_left_->HasNext()) {
-			Tuple<InTypeLeft> in_left_tuple = this->in_cache_left_->GetNext();
+			Change<InTypeLeft> in_left_change = this->in_cache_left_->GetNext();
 			while (this->in_cache_right_->HasNext()) {
-				Tuple<InTypeRight> in_right_tuple = this->in_cache_right_->GetNext();
+				Change<InTypeRight> in_right_change = this->in_cache_right_->GetNext();
 				// if left and right caches match on data put it into out_cache with new delta
-				if (this->Compare(&in_left_tuple.data, &in_right_tuple.data)) {
-					Tuple<OutType> out_tuple;
-					out_tuple.delta = {std::max(in_left_tuple.delta.ts, in_right_tuple.delta.ts),
-					                   in_left_tuple.delta.count * in_right_tuple.delta.count};
+				if (this->Compare(&in_left_change.data, &in_right_change.data)) {
+					Change<OutType> out_change;
+					out_change.delta = {std::max(in_left_change.delta.ts, in_right_change.delta.ts),
+					                   in_left_change.delta.count * in_right_change.delta.count};
 
-					out_tuple.data = this->join_layout_(in_left_tuple.data, in_right_tuple.data);
-					out_cache_->Insert(out_tuple);
+					out_change.data = this->join_layout_(in_left_change.data, in_right_change.data);
+					out_cache_->Insert(out_change);
 					produced = true;
 				}
 			}
@@ -1172,8 +1172,8 @@ public:
 
 		// compute left cache against right table
 		while (this->in_cache_left_->HasNext()) {
-			Tuple<InTypeLeft> in_left_tuple = this->in_cache_left_->GetNext();
-			MatchType match = this->get_match_left_(in_left_tuple.data);
+			Change<InTypeLeft> in_left_change = this->in_cache_left_->GetNext();
+			MatchType match = this->get_match_left_(in_left_change.data);
 
 			auto matches = this->right_table_->MatchSearch(match);
 
@@ -1182,14 +1182,14 @@ public:
 				InTypeRight &right_data = it->first;
 				// deltas from right table
 				const std::vector<Delta> &right_deltas = this->right_table_->Scan(idx);
-				// iterate all deltas of this tuple
+				// iterate all deltas of this change
 
-				Tuple<OutType> out_tuple;
-				out_tuple.data = this->join_layout_(in_left_tuple.data, right_data);
+				Change<OutType> out_change;
+				out_change.data = this->join_layout_(in_left_change.data, right_data);
 				for (auto &right_delta : right_deltas) {
-					out_tuple.delta = {std::max(in_left_tuple.delta.ts, right_delta.ts),
-					                   in_left_tuple.delta.count * right_delta.count};
-					this->out_cache_->Insert(out_tuple);
+					out_change.delta = {std::max(in_left_change.delta.ts, right_delta.ts),
+					                   in_left_change.delta.count * right_delta.count};
+					this->out_cache_->Insert(out_change);
 					produced = true;
 				}
 			}
@@ -1197,22 +1197,22 @@ public:
 
 		// compute right cache against left table
 		while (this->in_cache_right_->HasNext()) {
-			Tuple<InTypeRight> in_right_tuple = this->in_cache_right_->GetNext();
-			MatchType match = this->get_match_right_(in_right_tuple.data);
+			Change<InTypeRight> in_right_change = this->in_cache_right_->GetNext();
+			MatchType match = this->get_match_right_(in_right_change.data);
 			auto matches = this->left_table_->MatchSearch(match);
 
 			for (auto it = matches.begin(); it != matches.end(); it++) {
 				index idx = it->second;
 				InTypeLeft &left_data = it->first;
 				const std::vector<Delta> &left_deltas = this->left_table_->Scan(idx);
-				// iterate all deltas of this tuple
+				// iterate all deltas of this change
 
-				Tuple<OutType> out_tuple;
-				out_tuple.data = this->join_layout_(left_data, in_right_tuple.data);
+				Change<OutType> out_change;
+				out_change.data = this->join_layout_(left_data, in_right_change.data);
 				for (auto &left_delta : left_deltas) {
-					out_tuple.delta = {std::max(in_right_tuple.delta.ts, left_delta.ts),
-					                   in_right_tuple.delta.count * left_delta.count};
-					this->out_cache_->Insert(out_tuple);
+					out_change.delta = {std::max(in_right_change.delta.ts, left_delta.ts),
+					                   in_right_change.delta.count * left_delta.count};
+					this->out_cache_->Insert(out_change);
 					produced = true;
 				}
 			}
@@ -1222,14 +1222,14 @@ public:
 
 		// insert new deltas from in_caches
 		while (this->in_cache_right_->HasNext()) {
-			Tuple<InTypeRight> in_right_tuple = this->in_cache_right_->GetNext();
-			index idx = this->right_table_->Insert(in_right_tuple.data);
-			this->right_table_->InsertDelta(idx, in_right_tuple.delta);
+			Change<InTypeRight> in_right_change = this->in_cache_right_->GetNext();
+			index idx = this->right_table_->Insert(in_right_change.data);
+			this->right_table_->InsertDelta(idx, in_right_change.delta);
 		}
 		while (this->in_cache_left_->HasNext()) {
-			Tuple<InTypeLeft> in_left_tuple = this->in_cache_left_->GetNext();
-			index idx = this->left_table_->Insert(in_left_tuple.data);
-			this->left_table_->InsertDelta(idx, in_left_tuple.delta);
+			Change<InTypeLeft> in_left_change = this->in_cache_left_->GetNext();
+			index idx = this->left_table_->Insert(in_left_change.data);
+			this->left_table_->InsertDelta(idx, in_left_change.delta);
 		}
 
 		// clean in_caches
@@ -1335,7 +1335,7 @@ class AggregateByNode : public TypedNode<OutType> {
 public:
 	AggregateByNode(TypedNode<InType> *in_node,
 	                // count corresponds to count from delta, outtype is current aggregated OutType from rest of InType
-	                // matched tuples
+	                // matched changes
 	                std::function<OutType(const InType &, int, const OutType &, bool)> aggr_fun,
 	                std::function<MatchType(const InType &)> get_match, Graph *graph, BufferPool *bp,
 	                GarbageCollectSettings &gb_settings, MetaState &meta, index table_index)
@@ -1372,9 +1372,9 @@ public:
 		}
 	}
 
-	// output should be single tuple with updated values for different times
+	// output should be single change with updated values for different times
 	// so what we can do there? if we emit new count as part of value, then it
-	// will be treated as separate tuple if we emit new value as part of delta it
+	// will be treated as separate change if we emit new value as part of delta it
 	// also will be wrong what if we would do : insert previous value with count
 	// -1 and insert current with count 1 at the same time then old should get
 	// discarded
@@ -1382,10 +1382,10 @@ public:
 		bool produced = false;
 		// first insert all new data from cache to table
 		while (this->in_cache_->HasNext()) {
-			const Tuple<InType> in_tuple = this->in_cache_->GetNext();
+			const Change<InType> in_change = this->in_cache_->GetNext();
 
-			index idx = this->table_->Insert(in_tuple.data);
-			bool was_present = this->table_->InsertDelta(idx, in_tuple.delta);
+			index idx = this->table_->Insert(in_change.data);
+			bool was_present = this->table_->InsertDelta(idx, in_change.delta);
 			recompute_indexes_.insert(idx);
 
 			if (!was_present) {
@@ -1394,21 +1394,21 @@ public:
 		}
 
 		if (this->compact_) {
-			// delta_count for oldest keept version, from this we can deduce what tuples
+			// delta_count for oldest keept version, from this we can deduce what changes
 			// to emit;
 
-			//  out node will always have count of each tuple as either 0 or 1
+			//  out node will always have count of each change as either 0 or 1
 
 			// insert and delete index in out edge cache, for this match type
 			for (const auto &idx : recompute_indexes_) {
 				InType data = this->table_->Get(idx);
 				MatchType match = this->get_match_(data);
 
-				Tuple<OutType> insert_tpl;
+				Change<OutType> insert_tpl;
 				insert_tpl.delta.count = 1;
 				insert_tpl.delta.ts = this->ts_;
 
-				Tuple<OutType> delete_tpl;
+				Change<OutType> delete_tpl;
 				delete_tpl.delta.count = -1;
 				delete_tpl.delta.ts = this->ts_;
 
@@ -1423,12 +1423,12 @@ public:
 					// deltas from right table
 					const std::vector<Delta> &deltas = this->table_->Scan(idx);
 
-					// iterate all deltas of this tuple
+					// iterate all deltas of this change
 					int delete_count = 0;
 					int count = 0;
 					for (const auto &delta : deltas) {
-						// we might need to emit delete for previous version of this tuple
-						// previous version of this tuple existed if any of matches was already emited
+						// we might need to emit delete for previous version of this change
+						// previous version of this change existed if any of matches was already emited
 						// then we sum deltas older/equal to previous compaction ts
 						if (delta.ts <= this->previous_ts_ && !not_emited_.contains(it->second)) {
 							delete_count += delta.count;
@@ -1519,7 +1519,7 @@ private:
 
 	MetaState &meta_;
 
-	// timestamp will be used to track valid tuples
+	// timestamp will be used to track valid changes
 	// after update propagate it to input nodes
 	bool compact_ = false;
 	timestamp &previous_ts_;

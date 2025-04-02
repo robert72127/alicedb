@@ -95,7 +95,7 @@ WorkerPool manages worker threads and assign works to them, by scheduling comput
 ##### Table
 
 Main abstraction for accesing persistent data by Nodes,
-It's stores deltas, datastructure for efficient search of keys and tuples accesing.
+It's stores deltas, datastructure for efficient search of keys and changes accesing.
 Is responsible for compressing deltas and garbage collection.
 Supports standard operations of insert delete search .
 
@@ -122,14 +122,14 @@ Ingest and parse data into the system, for now limited to reading from file and 
 
 ##### Processing node in streaming database graph
 
-for each tuple we want to be able to:
-1) store it in persistent storage, with count of such tuples at each point of time.
+for each change we want to be able to:
+1) store it in persistent storage, with count of such changes at each point of time.
 2) Be able to effectively retrive it
-3) Be able to decide whether this tuple can be deleted from the system
+3) Be able to decide whether this change can be deleted from the system
 
 
- 4) Join and group by will also need a way to effectively search by only part of tuple, ie by specific fields,
- defined by transformation from original tuple.
+ 4) Join and group by will also need a way to effectively search by only part of change, ie by specific fields,
+ defined by transformation from original change.
 
 
  Each Table will maintain it's own indexes.
@@ -161,7 +161,7 @@ here is example combining it with projection
     )
 ```
 
-Stateless node, that filters tuples based on user provided filter function.
+Stateless node, that filters changes based on user provided filter function.
 
 ###### Union, Except
 
@@ -182,7 +182,7 @@ Since those work in almost identical way (only difference being adding/subtracti
 
 both union and except are actually implemented as stateless nodes in Node.h,
 Graph.h automatically sets Distinct node as output of them so that state is persisted
-and we correctly know when to emit insert and delete to out node, for each tuple.
+and we correctly know when to emit insert and delete to out node, for each change.
 
 ###### Intersect
  
@@ -199,7 +199,7 @@ and we correctly know when to emit insert and delete to out node, for each tuple
     )
 ```
 Uses same mechanism as union/except where distinct node is automatically set as output.
-It combines tuples from two tables, only passing those that appeard in both
+It combines changes from two tables, only passing those that appeard in both
  
 Statefull node that stores two tables one for each source
 count should be left_count x right_count  
@@ -230,11 +230,11 @@ count should be left_count x right_count
  it needs to store two Tables
  and it doesn't need to know their fields
  
-This statefull node matches every tuple with every other
+This statefull node matches every change with every other
  
 ###### Distinct
 
-This node output only single outtuple for given in tuple, its responsible for making sure outnode has 1/0 count for given tuple
+This node output only single outchange for given in change, its responsible for making sure outnode has 1/0 count for given change
 
 ```
     g->Distinct(
@@ -244,7 +244,7 @@ This node output only single outtuple for given in tuple, its responsible for ma
 
 ###### Join
 
- joins nodes from two tuples based on match field
+ joins nodes from two changes based on match field
 
 ```
     // joins dog and person on dog race and person's favourite dog race
@@ -312,9 +312,9 @@ This statefull node stores single table
 ##### Garbage collection
 
 We can configure system to use three different garbage collecting polcies
-    * Never delete tuples, store all data
-    * Delete all tuples whose never version is older than current delete timestamp
-    * Delete all tuples whose never version is older than current delete timestamp but whose delta count is 0
+    * Never delete changes, store all data
+    * Delete all changes whose never version is older than current delete timestamp
+    * Delete all changes whose never version is older than current delete timestamp but whose delta count is 0
 
 Configuration is done throught struct
 ```

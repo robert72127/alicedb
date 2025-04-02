@@ -50,8 +50,8 @@ public:
 		return HasNext();
 	}
 
-	Tuple<Type> GetNext() {
-		Tuple<Type> out_tuple;
+	Change<Type> GetNext() {
+		Change<Type> out_tuple;
 		std::array<char, sizeof(Type)> key = current_->first;
 		std::memcpy(&out_tuple.data, key.data(), sizeof(Type));
 		out_tuple.delta = current_->second[delta_index_];
@@ -59,7 +59,7 @@ public:
 		return out_tuple;
 	}
 
-	void Insert(const Tuple<Type> &tpl) {
+	void Insert(const Change<Type> &tpl) {
 		auto key = Key(tpl.data);
 		tuples_[key].push_back(tpl.delta);
 	}

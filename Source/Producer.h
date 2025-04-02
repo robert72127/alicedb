@@ -48,7 +48,7 @@ public:
 	 * @return true if storage was set, false if there were no new values at the
 	 * current moment
 	 */
-	virtual bool next(Tuple<Type> *storage) = 0;
+	virtual bool next(Change<Type> *storage) = 0;
 };
 
 // assumes format:
@@ -71,7 +71,7 @@ public:
 		}
 	}
 
-	bool next(Tuple<Type> *storage) override {
+	bool next(Change<Type> *storage) override {
 		if (!file_stream_.is_open()) {
 			return false;
 		}
@@ -118,7 +118,7 @@ public:
 		}
 	}
 
-	bool next(Tuple<Type> *storage) override {
+	bool next(Change<Type> *storage) override {
 		// in this impl delta is written directly
 		if (!file_stream_.read(reinterpret_cast<char *>(&storage->delta), sizeof(storage->delta))) {
 			if (file_stream_.eof()) {
@@ -176,7 +176,7 @@ public:
 		}
 	}
 
-	bool next(Tuple<Type> *storage) override {
+	bool next(Change<Type> *storage) override {
 		uint32_t message_length;
 
 		// prefixed with message length

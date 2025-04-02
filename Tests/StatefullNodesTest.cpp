@@ -209,40 +209,40 @@ struct CanAffordDog{
 
 
 
-void print_person(const AliceDB::Tuple<Person> &current_tuple){
-    std::cout<<current_tuple.delta.count << "||";
-    const Person &p = current_tuple.data;
+void print_person(const AliceDB::Change<Person> &current_change){
+    std::cout<<current_change.delta.count << "||";
+    const Person &p = current_change.data;
     std::cout<<p.name.data() << " " << p.surname.data() << " " << p.favourite_dog_race.data() << " " << p.age << " " << p.account_balance  << std::endl; 
 } 
 
-void print_joindogperson( const AliceDB::Tuple<JoinDogPerson> &current_tuple ){
-    const JoinDogPerson &p = current_tuple.data;
-    std::cout<<current_tuple.delta.count << "||";
+void print_joindogperson( const AliceDB::Change<JoinDogPerson> &current_change ){
+    const JoinDogPerson &p = current_change.data;
+    std::cout<<current_change.delta.count << "||";
     std::cout<<p.name.data() << " " << p.surname.data() << " " << p.favourite_dog_race.data() << " " << p.dog_cost << " " << p.account_balace << " "  << p.age << std::endl; 
 } 
 
-void print_nametotalbalance(const AliceDB::Tuple<NameTotalBalance> &current_tuple){
-    const NameTotalBalance &p = current_tuple.data;
-    std::cout<<current_tuple.delta.count << "||";
+void print_nametotalbalance(const AliceDB::Change<NameTotalBalance> &current_change){
+    const NameTotalBalance &p = current_change.data;
+    std::cout<<current_change.delta.count << "||";
     std::cout<<p.name.data() << " " << p.account_balance << std::endl; 
 } 
 
-void print_canafforddog(const AliceDB::Tuple<CanAffordDog> &current_tuple){
-    const CanAffordDog &p = current_tuple.data;
-    std::cout<<current_tuple.delta.count << "||";
+void print_canafforddog(const AliceDB::Change<CanAffordDog> &current_change){
+    const CanAffordDog &p = current_change.data;
+    std::cout<<current_change.delta.count << "||";
     std::cout<<p.name.data() << " " << p.surname.data()  << std::endl; 
 } 
 
-void print_pairpeople(const AliceDB::Tuple<PairPeople> &current_tuple){
-    const PairPeople &p = current_tuple.data;
-    std::cout<<current_tuple.delta.count << "||";
+void print_pairpeople(const AliceDB::Change<PairPeople> &current_change){
+    const PairPeople &p = current_change.data;
+    std::cout<<current_change.delta.count << "||";
     std::cout<<p.lname.data() << " " << p.lsurname.data() << " " << p.lage << "\t\t"; 
     std::cout<<p.rname.data() << " " << p.rsurname.data() << " " << p.rage << std::endl; 
 } 
 
-void print_sameagedpeople(const AliceDB::Tuple<SameAgedPeople> &current_tuple){
-    const SameAgedPeople &p = current_tuple.data;
-    std::cout<<current_tuple.delta.count << "||";
+void print_sameagedpeople(const AliceDB::Change<SameAgedPeople> &current_change){
+    const SameAgedPeople &p = current_change.data;
+    std::cout<<current_change.delta.count << "||";
     std::cout<<p.lname.data() << " " << p.lsurname.data() << " " << p.age << " "<< p.rname.data() << " " << p.rsurname.data()  << std::endl; 
 } 
 

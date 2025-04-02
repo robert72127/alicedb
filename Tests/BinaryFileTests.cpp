@@ -46,12 +46,12 @@ std::array<std::string, 100> names = {
 
 
 
-void print_person(const AliceDB::Tuple<Person> &current_tuple) {
-    std::cout << current_tuple.delta.count << " " 
-              << current_tuple.data.name.data() << " " 
-              << current_tuple.data.surname.data() << " " 
-              << current_tuple.data.age << " " 
-              << current_tuple.data.account_balance  << std::endl; 
+void print_person(const AliceDB::Change<Person> &current_change) {
+    std::cout << current_change.delta.count << " " 
+              << current_change.data.name.data() << " " 
+              << current_change.data.surname.data() << " " 
+              << current_change.data.age << " " 
+              << current_change.data.account_balance  << std::endl; 
 }
 
 
@@ -62,22 +62,22 @@ void prepare_test_data_file_binary(const std::string &bin_fname) {
     }
 
     for (int i = 0; i < 100; ++i) {
-        AliceDB::Tuple<Person> tuple;
-        std::memset(&tuple, 0, sizeof(AliceDB::Tuple<Person>));
+        AliceDB::Change<Person> change;
+        std::memset(&change, 0, sizeof(AliceDB::Change<Person>));
         
-        tuple.delta.count = 1;
-        tuple.delta.ts = AliceDB::get_current_timestamp();
+        change.delta.count = 1;
+        change.delta.ts = AliceDB::get_current_timestamp();
 
         std::string name_str = names[i % names.size()];
         std::string surname_str = surnames[i % surnames.size()];
 
-        std::strncpy(tuple.data.name.data(), name_str.c_str(), tuple.data.name.size());
-        std::strncpy(tuple.data.surname.data(), surname_str.c_str(), tuple.data.surname.size());
-        tuple.data.age = 18 + i;
-        tuple.data.account_balance = 100.0f + i;
+        std::strncpy(change.data.name.data(), name_str.c_str(), change.data.name.size());
+        std::strncpy(change.data.surname.data(), surname_str.c_str(), change.data.surname.size());
+        change.data.age = 18 + i;
+        change.data.account_balance = 100.0f + i;
 
-        bin_out.write(reinterpret_cast<char*>(&tuple.delta), sizeof(tuple.delta));
-        bin_out.write(reinterpret_cast<char*>(&tuple.data), sizeof(Person));
+        bin_out.write(reinterpret_cast<char*>(&change.delta), sizeof(change.delta));
+        bin_out.write(reinterpret_cast<char*>(&change.data), sizeof(Person));
     }
     bin_out.close();
 }

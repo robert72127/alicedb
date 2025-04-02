@@ -16,7 +16,7 @@ struct Delta {
 };
 
 template <typename Type>
-struct Tuple {
+struct Change {
 	Delta delta;
 	Type data;
 };

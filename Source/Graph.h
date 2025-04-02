@@ -251,7 +251,7 @@ public:
 		return reinterpret_cast<AliceDB::SinkNode<InType> *>(sink);
 	}
 
-	// stateless node that filters tuples based on condition applied to it
+	// stateless node that filters changes based on condition applied to it
 	template <typename F, typename N>
 	auto Filter(F condition, N *in_node) -> TypedNode<typename N::value_type> * {
 		this->check_running();
@@ -262,7 +262,7 @@ public:
 		return filter;
 	}
 
-	// stateless node that creates output tuples from input tuples using projection function
+	// stateless node that creates output changes from input changes using projection function
 	template <typename F, typename N>
 	auto Projection(F projection_function, N *in_node)
 	    -> TypedNode<std::invoke_result_t<F, const typename N::value_type &>> * {
@@ -275,7 +275,7 @@ public:
 		return projection;
 	}
 
-	// Statefull node that keeps track whether current tuple count is positive or negative for each tuple
+	// Statefull node that keeps track whether current change count is positive or negative for each change
 	template <typename N>
 	auto Distinct(N *in_node) -> TypedNode<typename N::value_type> * {
 		this->check_running();
@@ -432,7 +432,7 @@ public:
 		if (AllProcesedPreviousLevel()) {
 			// ok all nodes processed at last level we can restart
 			if (current_level_ == this->levels_.size()) {
-				// now that we processed all tuples we can run "backward" and check if any node needs compaction
+				// now that we processed all changes we can run "backward" and check if any node needs compaction
 				for (auto *node : this->sinks_) {
 					node->UpdateTimestamp();
 				}

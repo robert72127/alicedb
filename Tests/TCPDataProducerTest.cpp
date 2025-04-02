@@ -51,8 +51,8 @@ bool parseLine(std::istringstream &iss, Person *p) {
 }
  
 
-void print_name(const AliceDB::Tuple<Name> &current_tuple){
-    const Name &p = current_tuple.data;
+void print_name(const AliceDB::Change<Name> &current_change){
+    const Name &p = current_change.data;
     std::cout<<p.name.data() << std::endl; 
 } 
 

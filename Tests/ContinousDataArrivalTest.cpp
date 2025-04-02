@@ -118,14 +118,14 @@ bool parsePerson(std::istringstream &iss, Person *p) {
             return true;
 }
 
-void print_person(const AliceDB::Tuple<Person> &current_tuple){
-        std::cout<<current_tuple.delta.count << " " << current_tuple.data.name.data() << " " 
-        << current_tuple.data.surname.data() << " " << current_tuple.data.age 
-        << " " << current_tuple.data.account_balance  << std::endl; 
+void print_person(const AliceDB::Change<Person> &current_change){
+        std::cout<<current_change.delta.count << " " << current_change.data.name.data() << " " 
+        << current_change.data.surname.data() << " " << current_change.data.age 
+        << " " << current_change.data.account_balance  << std::endl; 
 } 
 
-void print_name(const AliceDB::Tuple<Name> &current_tuple){
-    std::cout<<current_tuple.delta.count << " " << current_tuple.data.name.data() << std::endl;
+void print_name(const AliceDB::Change<Name> &current_change){
+    std::cout<<current_change.delta.count << " " << current_change.data.name.data() << std::endl;
 } 
 
 
@@ -166,8 +166,8 @@ TEST(CONTINOUS_DATA_ARRIVAL_TEST, PROJECTION){
     // debugging
     
     for(auto it = view->begin() ; it != view->end(); ++it){
-        const AliceDB::Tuple<Name> &current_tuple = *it;
-        ASSERT_EQ(current_tuple.delta.count , 100 * i);
+        const AliceDB::Change<Name> &current_change = *it;
+        ASSERT_EQ(current_change.delta.count , 100 * i);
         print_name(*it);
     }
 

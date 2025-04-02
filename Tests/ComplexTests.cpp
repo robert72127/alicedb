@@ -207,40 +207,40 @@ struct CanAffordDog{
 
 
 
-void print_person(const AliceDB::Tuple<Person> &current_tuple){
-    std::cout<<current_tuple.delta.count << "|" << current_tuple.delta.ts << "||";
-    const Person &p = current_tuple.data;
+void print_person(const AliceDB::Change<Person> &current_change){
+    std::cout<<current_change.delta.count << "|" << current_change.delta.ts << "||";
+    const Person &p = current_change.data;
     std::cout<<p.name.data() << " " << p.surname.data() << " " << p.favourite_dog_race.data() << " " << p.age << " " << p.account_balance  << std::endl; 
 } 
 
-void print_joindogperson( const AliceDB::Tuple<JoinDogPerson> &current_tuple ){
-    const JoinDogPerson &p = current_tuple.data;
-    std::cout<<current_tuple.delta.count << "||";
+void print_joindogperson( const AliceDB::Change<JoinDogPerson> &current_change ){
+    const JoinDogPerson &p = current_change.data;
+    std::cout<<current_change.delta.count << "||";
     std::cout<<p.name.data() << " " << p.surname.data() << " " << p.favourite_dog_race.data() << " " << p.dog_cost << " " << p.account_balace << " "  << p.age << std::endl; 
 } 
 
-void print_nametotalbalance(const AliceDB::Tuple<NameTotalBalance> &current_tuple){
-    const NameTotalBalance &p = current_tuple.data;
-    std::cout<<current_tuple.delta.count << "||";
+void print_nametotalbalance(const AliceDB::Change<NameTotalBalance> &current_change){
+    const NameTotalBalance &p = current_change.data;
+    std::cout<<current_change.delta.count << "||";
     std::cout<<p.name.data() << " " << p.account_balance << std::endl; 
 } 
 
-void print_canafforddog(const AliceDB::Tuple<CanAffordDog> &current_tuple){
-    const CanAffordDog &p = current_tuple.data;
-    std::cout<<current_tuple.delta.count << "||";
+void print_canafforddog(const AliceDB::Change<CanAffordDog> &current_change){
+    const CanAffordDog &p = current_change.data;
+    std::cout<<current_change.delta.count << "||";
     std::cout<<p.name.data() << " " << p.surname.data()  << std::endl; 
 } 
 
-void print_pairpeople(const AliceDB::Tuple<PairPeople> &current_tuple){
-    const PairPeople &p = current_tuple.data;
-    std::cout<<current_tuple.delta.count << "||";
+void print_pairpeople(const AliceDB::Change<PairPeople> &current_change){
+    const PairPeople &p = current_change.data;
+    std::cout<<current_change.delta.count << "||";
     std::cout<<p.lname.data() << " " << p.lsurname.data() << " " << p.lage << "\t\t"; 
     std::cout<<p.rname.data() << " " << p.rsurname.data() << " " << p.rage << std::endl; 
 } 
 
-void print_sameagedpeople(const AliceDB::Tuple<SameAgedPeople> &current_tuple){
-    const SameAgedPeople &p = current_tuple.data;
-    std::cout<<current_tuple.delta.count << "||";
+void print_sameagedpeople(const AliceDB::Change<SameAgedPeople> &current_change){
+    const SameAgedPeople &p = current_change.data;
+    std::cout<<current_change.delta.count << "||";
     std::cout<<p.lname.data() << " " << p.lsurname.data() << " " << p.age << " "<< p.rname.data() << " " << p.rsurname.data()  << std::endl; 
 } 
 
@@ -381,7 +381,7 @@ void prepare_people_data_delete_test(std::string people_fname){
     people_writter.close();
 }
 
-// first insert then delete some tuple, make sure that count is correct
+// first insert then delete some change, make sure that count is correct
 TEST(DELETE_TEST, DELETE){
     std::string people_fname = "people.txt";
     prepare_people_data_delete_test(people_fname);
@@ -417,7 +417,7 @@ TEST(DELETE_TEST, DELETE){
 }
 
 
-// first insert then delete some tuple, make sure that count is correct
+// first insert then delete some change, make sure that count is correct
 TEST(DELETE_TEST, DELETE_DISTINCT){
 
     std::string people_fname = "people.txt";
@@ -489,8 +489,8 @@ void prepare_people_data_delete_test_future(std::string people_fname){
     people_writter.close();
 }
 
-// insert and delete tuple with different times, check if view is correct at each time
-// first insert then delete some tuple, make sure that count is correct
+// insert and delete change with different times, check if view is correct at each time
+// first insert then delete some change, make sure that count is correct
 TEST(DELETE_TEST, DELETE_IN_FUTURE){
     std::string people_fname = "people.txt";
     prepare_people_data_delete_test_future(people_fname);
@@ -524,8 +524,8 @@ TEST(DELETE_TEST, DELETE_IN_FUTURE){
     std::filesystem::remove_all("database");
 }
 
-// insert and delete tuple with different times, check if view is correct at each time
-// first insert then delete some tuple, make sure that count is correct
+// insert and delete change with different times, check if view is correct at each time
+// first insert then delete some change, make sure that count is correct
 TEST(DELETE_TEST, DELETE_DISTINCT_IN_FUTURE){
 
     std::string people_fname = "people.txt";
@@ -649,7 +649,7 @@ void prepare_data_garbage_collection_test(std::string people_fname){
                 
                 float account_ballance = 100;
 
-                // half of tuples will be very old
+                // half of changes will be very old
                 std::string person_str = "insert " + std::to_string(AliceDB::get_current_timestamp() / (1 + cnt % 2)  ) 
                     + " "  + name + " " + surname + " " + dogbreeds[dog_race_nr] + " "  +  std::to_string(age) + " " +std::to_string(account_ballance);
                 
@@ -665,7 +665,7 @@ void prepare_data_garbage_collection_test(std::string people_fname){
 
 
 // insert enough to fill K Pages, then perform garbage collection,
-// after that insert few new tuples, check if they were inserted into empty space, created by garbage collection
+// after that insert few new changes, check if they were inserted into empty space, created by garbage collection
 TEST(GARBAGE_COLLECTION_TEST, GARBAGE_COLLECTION){
 
     std::string people_fname = "people.txt";

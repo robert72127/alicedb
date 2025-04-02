@@ -78,7 +78,7 @@ public:
 	}
 
 	/**
-	 * @brief merge tuples from oldest up to end_ts by summing values, by index for given table up to end_timestamp
+	 * @brief merge deltas from oldest up to end_ts by summing values, by index for given table up to end_timestamp
 	 */
 
 	void Merge(const timestamp end_ts) {
