@@ -95,7 +95,7 @@ WorkerPool manages worker threads and assign works to them, by scheduling comput
 ##### Table
 
 Main abstraction for accesing persistent data by Nodes,
-It's stores deltas, datastructure for efficient search of keys and changes accesing.
+It's stores deltas, datastructure for efficient search of keys and tuple accesing.
 Is responsible for compressing deltas and garbage collection.
 Supports standard operations of insert delete search .
 
@@ -123,12 +123,12 @@ Ingest and parse data into the system, for now limited to reading from file and 
 ##### Processing node in streaming database graph
 
 for each change we want to be able to:
-1) store it in persistent storage, with count of such changes at each point of time.
+1) store it data persistent storage, with count of such changes at each point of time.
 2) Be able to effectively retrive it
-3) Be able to decide whether this change can be deleted from the system
+3) Be able to decide whether this tuple and it's count can be deleted from the system
 
 
- 4) Join and group by will also need a way to effectively search by only part of change, ie by specific fields,
+ 4) Join and group by will also need a way to effectively search by only part of data, ie by specific fields,
  defined by transformation from original change.
 
 
@@ -199,9 +199,9 @@ and we correctly know when to emit insert and delete to out node, for each chang
     )
 ```
 Uses same mechanism as union/except where distinct node is automatically set as output.
-It combines changes from two tables, only passing those that appeard in both
+It combines changes from two sources, only passing those that appeard in both
  
-Statefull node that stores two tables one for each source
+Statefull node that stores table one for each source
 count should be left_count x right_count  
 
 ###### Product
@@ -226,7 +226,7 @@ count should be left_count x right_count
 
 ```
 	
- It takes two tables as inputs and produce X product
+ It takes two sources as inputs and produce X product
  it needs to store two Tables
  and it doesn't need to know their fields
  
@@ -244,7 +244,7 @@ This node output only single outchange for given in change, its responsible for 
 
 ###### Join
 
- joins nodes from two changes based on match field
+ joins nodes from two Streams based on match field
 
 ```
     // joins dog and person on dog race and person's favourite dog race
@@ -312,9 +312,9 @@ This statefull node stores single table
 ##### Garbage collection
 
 We can configure system to use three different garbage collecting polcies
-    * Never delete changes, store all data
-    * Delete all changes whose never version is older than current delete timestamp
-    * Delete all changes whose never version is older than current delete timestamp but whose delta count is 0
+    * Never delete tuples, store all data
+    * Delete all tuples whose never version is older than current delete timestamp
+    * Delete all tuples whose never version is older than current delete timestamp but whose delta count is 0
 
 Configuration is done throught struct
 ```
