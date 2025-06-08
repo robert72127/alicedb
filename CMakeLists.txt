@@ -15,6 +15,7 @@ project(AliceDB
 add_subdirectory(Source)
 add_subdirectory(ThirdParty)
 
+add_subdirectory(main)
 
 option(ENABLE_TESTING "Enable testing" ON)
 
