@@ -62,7 +62,6 @@ std::array<float, 50> dogprices = {
 };
 
 
-// this isn't required part, but we just need to create our data files
 void prepare_people_data_file(std::string people_fname){
 
     std::srand(std::time(nullptr));
@@ -73,7 +72,7 @@ void prepare_people_data_file(std::string people_fname){
     int cnt = 0;
     for (auto &name : names){
         for(auto &surname: surnames ){
-                int age = std::rand() % 101; // Random number between 0 and 100
+                int age = std::rand() % 101; 
                 
                 int dog_race_nr = std::rand() % 50;
                 
@@ -89,22 +88,6 @@ void prepare_people_data_file(std::string people_fname){
     people_writter.close();
 }
 
-void prepare_dog_data_file(std::string dogs_fname){
-
-    std::ofstream dog_writter{dogs_fname};
-    // parse dogs
-    for(int i = 0; i < 50; i++){
-        std::string breed = dogbreeds[i];
-        float price = dogprices[i];
-        std::string dog_str =  "insert " + std::to_string(AliceDB::get_current_timestamp() ) 
-                    + " "  +  breed + " "  +  std::to_string(price) ;
-
-        dog_writter << dog_str << std::endl;
-    }
-    dog_writter.close();
-}
-
-
 struct Person {
     std::array<char, 50> name;
     std::array<char, 50> surname;
@@ -113,34 +96,10 @@ struct Person {
     float account_balance;
 };
 
-struct NameTotalBalance {
-    std::array<char, 50> name;
-    float account_balance;
-};
 
 struct Name{
     std::array<char, 50> name;
 };
-
-struct Dog {
-    std::array<char, 50> name;
-    float cost;
-};
-
-struct JoinDogPerson {
-    std::array<char, 50> name;
-    std::array<char, 50> surname;
-    std::array<char, 50> favourite_dog_race;
-    float dog_cost;
-    float account_balace;
-    int age;
-};
-
-struct CanAffordDog{
-    std::array<char, 50> name;
-    std::array<char, 50> surname;
-};
-
 
 
 bool parsePerson(std::istringstream &iss, Person *p) {
@@ -150,10 +109,9 @@ bool parsePerson(std::istringstream &iss, Person *p) {
             char favourite_dog_race[50];
 
             if (!(iss >> name >> surname >> favourite_dog_race >> p->age >> p->account_balance )) {
-                return false; // parse error
+                return false;
             }
 
-            // Copy fields to ensure no overflow:
             std::strncpy(p->name.data(), name, sizeof(p->name));
             std::strncpy(p->surname.data(), surname, sizeof(p->surname));
             std::strncpy(p->favourite_dog_race.data(), favourite_dog_race, sizeof(p->favourite_dog_race));
@@ -161,24 +119,10 @@ bool parsePerson(std::istringstream &iss, Person *p) {
             return true;
 }
 
-bool parseDog(std::istringstream &iss, Dog *d) {
-
-            char name[50];
-
-            if (!(iss >> name >> d->cost )) {
-                return false; // parse error
-            }
-
-            // Copy fields to ensure no overflow:
-            std::strncpy(d->name.data(), name, sizeof(d->name));
-            return true;
-}
-
-
-void print_joindogperson( const AliceDB::Change<JoinDogPerson> &current_change ){
-    const JoinDogPerson &p = current_change.data;
+void print_names( const AliceDB::Change<Name> &current_change ){
+    const Name &n = current_change.data;
     std::cout<<current_change.delta.count << "||";
-    std::cout<<p.name.data() << " " << p.surname.data() << " " << p.favourite_dog_race.data() << " " << p.dog_cost << std::endl; 
+    std::cout<<n.name.data()  << std::endl; 
 } 
 
 
@@ -187,76 +131,40 @@ int main(){
     std::string people_fname = "people.txt";
     prepare_people_data_file(people_fname);
      std::string dogs_fname = "dogs.txt";
-    prepare_dog_data_file(dogs_fname);
 
 
     bool stop = false;
 
     int worker_threads_cnt = 1;
     
-    auto db = std::make_unique<AliceDB::DataBase>( "./database", worker_threads_cnt);
+    auto db = std::make_unique<AliceDB::DataBase>( "./database_1", worker_threads_cnt);
 
     auto g = db->CreateGraph();
 
     auto *view = 
             g->View(
-                g->Filter(
-                    [](const JoinDogPerson &p) -> bool {return p.account_balace > p.dog_cost;},
-                    g->Join(
-                        [](const Person &p)  { return p.favourite_dog_race;},
-                        [](const Dog &d)  { return d.name;},
-                        [](const Person &p, const Dog &d) { 
-                            return  JoinDogPerson{
-                                .name=p.name,
-                                .surname=p.surname,
-                                .favourite_dog_race=d.name,
-                                .dog_cost=d.cost,
-                                .account_balace=p.account_balance,
-                                .age=p.age
-                            };
-                        },
-                        g->Filter(
-                            [](const Person &p) -> bool {return p.age > 18;},
+                g->Projection(
+                    [](const Person &p) {return Name{.name=p.name};},
+                    g->Filter(
+                        [](const Person &p) -> bool {return p.age > 18;},
                             g->Source<Person>(AliceDB::ProducerType::FILE , people_fname, parsePerson,0)
-                        ),
-                        g->Source<Dog>(AliceDB::ProducerType::FILE, dogs_fname, parseDog,0)
                     )
-                        
                 )
             );
 
     db->StartGraph(g);
    
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     
-    // thread for printing state
-    bool stop_print =false;
-    auto print = [&stop_print](AliceDB::SinkNode<JoinDogPerson> *view){
-        while(!stop_print){
-            std::cout<<"******************************************\n";
-            std::cout<<"|----------------------------------------|\n";
-            std::cout<<"|               STATE:                   | \n";
-            std::cout<<"|----------------------------------------|\n";
-            for(auto it = view->begin() ; it != view->end(); ++it){
-                print_joindogperson(*it);
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-            std::cout<<"******************************************\n";
-        }
-    };
+    db->StopProcessing(); 
     
-    std::thread print_thread(print, view);
-
-    // sleep for 2 seconds, then stop server & printing threads 
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    
-    db->StopProcessing();
-    
-    stop_print = true;
-    if(print_thread.joinable()){
-        print_thread.join();
+    for(auto it = view->begin() ; it != view->end(); ++it){
+        print_names(*it);
     }
+    
 
     db = nullptr;
-    std::filesystem::remove_all("database");
+    // don't remove let us use results from previous iter
+    //std::filesystem::remove_all("database_1");
 
 }

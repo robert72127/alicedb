@@ -1400,7 +1400,11 @@ public:
 			//  out node will always have count of each change as either 0 or 1
 
 			// insert and delete index in out edge cache, for this match type
+			std::set<index> skip;
 			for (const auto &idx : recompute_indexes_) {
+				if(skip.contains(idx)){
+					continue;
+				}
 				InType data = this->table_->Get(idx);
 				MatchType match = this->get_match_(data);
 
@@ -1413,12 +1417,13 @@ public:
 				delete_tpl.delta.ts = this->ts_;
 
 				auto matches = this->table_->MatchSearch(match);
-
+				
 				bool first = true;
 				bool delete_any = false;
 				bool first_delete = true;
 
 				for (auto it = matches.begin(); it != matches.end(); it++) {
+					skip.insert(it->second);
 					InType &matched_data = it->first;
 					// deltas from right table
 					const std::vector<Delta> &deltas = this->table_->Scan(idx);
