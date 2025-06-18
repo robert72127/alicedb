@@ -1,4 +1,4 @@
-Alicedb is incremental database library for C++, that works by executing queries in streaming model.
+Alicedb is incremental database library for C++, that works by executing transformations on changes in streaming model.
 
 ## Development Commands
 
@@ -85,7 +85,6 @@ for(auto it = view->begin() ; it != view->end(); ++it){
 Graph layer is responsible for keeping track of nodes, monitioring whether it's already running, scheduling node's computations 
 and for type inference. 
 
-
 #### WorkerPool:
 
 WorkerPool manages worker threads and assign works to them, by scheduling computations for all nodes from all graphs.
@@ -95,7 +94,7 @@ WorkerPool manages worker threads and assign works to them, by scheduling comput
 ##### Table
 
 Main abstraction for accesing persistent data by Nodes,
-It's stores deltas, datastructure for efficient search of keys and tuple accesing.
+It's stores deltas,and actual data.
 Is responsible for compressing deltas and garbage collection.
 Supports standard operations of insert delete search .
 
@@ -105,11 +104,10 @@ It also conatains in memory only state used for retriving indexes based on match
 
 Integrated with disk manager through preregistered buffers, used to load disk pages into memory
 
-
 ##### Disk Manager
 
 Disk manager is responsible for disk I/O
-it has it's own single worker that is responsible for managing R/W requests with IO_URING
+it has it's own single worker that is responsible for managing disk requests with IO_URING
 
 Work operations will return future that will be satisfied when actual operation
 is performed
