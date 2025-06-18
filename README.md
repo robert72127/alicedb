@@ -99,6 +99,8 @@ It's stores deltas, datastructure for efficient search of keys and tuple accesin
 Is responsible for compressing deltas and garbage collection.
 Supports standard operations of insert delete search .
 
+It also conatains in memory only state used for retriving indexes based on matching fields
+
 ##### Buffer Pool
 
 Integrated with disk manager through preregistered buffers, used to load disk pages into memory
@@ -116,7 +118,7 @@ disk manager, tries to perform disk operations in batch
 
 #### Producers
 
-Ingest and parse data into the system, for now limited to reading from file and from tcp server.
+Ingest and parse data into the system, for now limited to reading from file,binary file and from tcp server, but could be extended easily.
 
 #### Nodes
 
@@ -126,11 +128,8 @@ for each change we want to be able to:
 1) store it data persistent storage, with count of such changes at each point of time.
 2) Be able to effectively retrive it
 3) Be able to decide whether this tuple and it's count can be deleted from the system
-
-
- 4) Join and group by will also need a way to effectively search by only part of data, ie by specific fields,
+4) Join and group by will also need a way to effectively search by only part of data, ie by specific fields,
  defined by transformation from original change.
-
 
  Each Table will maintain it's own indexes.
  
@@ -273,9 +272,6 @@ For this statefull node we need to keep both inputs in tables.
 ###### Aggregations, 
 
 ```
-    // dummy example to explain idea,
-    // let's sum accounts balance of all people based on their name
-
     auto *view = 
         g->View(
                 g->AggregateBy(
@@ -331,25 +327,18 @@ that can be passed to database instance
 DataBase(std::filesystem::path database_directory, unsigned int worker_threads_count = 1, GarbageCollectSettings *gb_settings = nullptr)
 ```
 
-### Future Extensions:
-
-#### SQL Layer:
-
-Our library is implemented in such way that it would allow for accepting sql query as an input, and then generating AliceDB code
-it would generate structs, and recursively compute graph layout, by chaining nodes defined in previous sections.
-Then such code could be compiled as shared lib and dynamically linked to current process.
-
-(cmu 15-721)[https://15721.courses.cs.cmu.edu/spring2024/slides/07-compilation.pdf]
-
 #### Sources
-
-(unixism)[https://unixism.net/loti/tutorial/fixed_buffers.html] - fixed buffers
-
-https://www.vldb.org/pvldb/vol7/p853-klonatos.pdf dbsp - as general for processing framework
-
-https://www.skyzh.dev/blog/2023-12-28-store-of-streaming-states/ - overwiew of streaming systems
 
 [dida why] https://github.com/jamii/dida/blob/main/docs/why.md - dida simple streaming database based on differential dataflow,
 this document explain needs for internal consistency, eventual consistency. And batch processing in streaming system.
+
+(cmu database systems[https://15445.courses.cs.cmu.edu/fall2024/]
+
+Designing Data-Intensive Applications Martin Kleppmann
+
+(Building a high-performance database buffer pool in Zig using io_uring's new fixedbuffer mode)[https://gavinray97.github.io/blog/io-uring-fixed-bufferpool-zig]
+
+(unixism)[https://unixism.net/loti/tutorial/fixed_buffers.html] - fixed buffers
+
 
 
